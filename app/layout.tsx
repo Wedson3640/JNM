@@ -11,6 +11,17 @@ export const metadata: Metadata = {
   },
   description:
     "Portal institucional da Associação Espírita João Nunes Maia em Teresina/PI, com palestras, estudos, eventos, notícias e assistência social.",
+  icons: {
+    icon: [
+      {
+        url: "/images/favicoJNM%2064x64.png",
+        sizes: "64x64",
+        type: "image/png"
+      }
+    ],
+    shortcut: "/images/favicoJNM%2064x64.png",
+    apple: "/images/favicoJNM%2064x64.png"
+  },
   openGraph: {
     title: "Associação Espírita João Nunes Maia",
     description: "Palestras, estudos, eventos e ações fraternas em Teresina/PI.",
