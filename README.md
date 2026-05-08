@@ -1,30 +1,18 @@
 # Associação Espírita João Nunes Maia
 
-Portal institucional em Next.js 14 com área interna para publicações.
+Portal institucional da Associação Espírita João Nunes Maia — Teresina, Piauí.
 
 ## Recursos
 
-- Site responsivo inspirado no mockup fornecido.
-- Header, hero com carrossel, atendimentos, programação, vídeos, notícias, áreas, eventos, estudos, convênios e rodapé.
-- Login em `/login` com Supabase Auth.
-- Área protegida em `/admin`.
-- CRUD de notícias com publicar/despublicar.
-- Campos para imagem e vídeo sem alterar a estrutura do site.
-- SEO com metadados, Open Graph, robots e sitemap.
-- Segurança básica com sessão JWT do Supabase, RLS no banco e headers HTTP.
+- Site responsivo com cabeçalho, carrossel de palestras, atendimento fraterno, programação semanal, vídeos, notícias, eventos, grupos de estudos, convênios e rodapé.
+- Área interna para gerenciamento de conteúdo com autenticação.
+- SEO com metadados, Open Graph, sitemap e robots.
 
 ## Configuração
 
-1. Crie um projeto no Supabase.
-2. Rode o SQL em `supabase/schema.sql`.
-3. Copie `.env.example` para `.env.local`.
-4. Preencha:
-
-```env
-NEXT_PUBLIC_SITE_URL=https://seudominio.com.br
-NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
-NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key
-```
+1. Crie um projeto no [Supabase](https://supabase.com).
+2. Execute o script `supabase/schema.sql` no SQL Editor do Supabase.
+3. Copie `.env.example` para `.env.local` e preencha as variáveis com os valores do seu projeto.
 
 ## Desenvolvimento
 
@@ -33,7 +21,7 @@ npm install
 npm run dev
 ```
 
-Abra `http://localhost:3002`.
+Acesse `http://localhost:3002`.
 
 ## Docker
 
@@ -41,4 +29,4 @@ Abra `http://localhost:3002`.
 docker compose up --build
 ```
 
-Em VPS, publique atrás de um proxy com HTTPS habilitado.
+Em VPS, publique atrás de um proxy reverso com HTTPS habilitado.
