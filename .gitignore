@@ -1,0 +1,54 @@
+# dependencies
+node_modules/
+.pnp
+.pnp.js
+
+# next.js
+.next/
+out/
+build/
+dist/
+
+# production
+coverage/
+
+# env files
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+*.log
+
+# system files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# editor
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# typescript
+*.tsbuildinfo
+next-env.d.ts
+
+# docker/local runtime
+.docker/
+docker-data/
+
+# supabase local artifacts
+.supabase/
+supabase/.branches/
+supabase/.temp/
+
+# misc
+*.pem
