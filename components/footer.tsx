@@ -3,8 +3,7 @@ import { MapPin } from "lucide-react";
 import { contact, socialLinks } from "@/lib/content";
 
 const logoJnm = "/images/logo%20JNM%20(1).png";
-const mapsUrl =
-  "https://www.google.com/maps/search/?api=1&query=Rua%20In%C3%A1cio%20da%20Costa%20Filho%204059%20Santo%20Ant%C3%B4nio%20Teresina%20Piau%C3%AD%20Brazil";
+const mapsUrl = "https://maps.app.goo.gl/dFBxtqRyHAmvG3Do9";
 
 export function Footer() {
   return (
