@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Eye, EyeOff, KeyRound, Lock, Mail } from "lucide-react";
+import { Eye, EyeOff, KeyRound, Loader2, Lock, Mail, User } from "lucide-react";
 import { registerUser } from "@/app/cad_users/actions";
 
 function PasswordInput({
@@ -44,6 +44,8 @@ function PasswordInput({
 }
 
 export function RegisterForm() {
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
@@ -66,7 +68,8 @@ export function RegisterForm() {
     }
 
     setLoading(true);
-    const result = await registerUser(email, password, code);
+    const displayName = `${firstName.trim()} ${lastName.trim()}`.trim();
+    const result = await registerUser(email, password, code, displayName);
     setLoading(false);
 
     if (result.error) {
@@ -75,6 +78,8 @@ export function RegisterForm() {
     }
 
     setMessage({ text: "Usuário criado com sucesso. Acesse a área interna pelo link de login.", ok: true });
+    setFirstName("");
+    setLastName("");
     setEmail("");
     setPassword("");
     setConfirm("");
@@ -82,15 +87,52 @@ export function RegisterForm() {
   }
 
   return (
-    <form onSubmit={onSubmit} className="card w-full max-w-md p-6">
+    <form onSubmit={onSubmit} className="card w-full p-6">
       <h1 className="text-2xl font-semibold text-gray-950">Cadastro de acesso</h1>
       <p className="mt-2 text-sm">Crie uma conta para acessar a área interna.</p>
 
-      <label className="mt-6 block text-sm font-semibold text-gray-950" htmlFor="reg-email">
+      <div className="mt-6 grid grid-cols-2 gap-3">
+        <div>
+          <label className="block text-sm font-semibold text-gray-950" htmlFor="reg-firstname">
+            Nome
+          </label>
+          <div className="mt-2 flex items-center gap-2 rounded-2xl border border-orange-100 bg-white px-4">
+            <User className="h-5 w-5 shrink-0 text-primary" />
+            <input
+              id="reg-firstname"
+              type="text"
+              autoComplete="given-name"
+              required
+              value={firstName}
+              onChange={(e) => setFirstName(e.target.value)}
+              className="w-full bg-transparent py-3 outline-none"
+            />
+          </div>
+        </div>
+        <div>
+          <label className="block text-sm font-semibold text-gray-950" htmlFor="reg-lastname">
+            Sobrenome
+          </label>
+          <div className="mt-2 flex items-center gap-2 rounded-2xl border border-orange-100 bg-white px-4">
+            <User className="h-5 w-5 shrink-0 text-primary" />
+            <input
+              id="reg-lastname"
+              type="text"
+              autoComplete="family-name"
+              required
+              value={lastName}
+              onChange={(e) => setLastName(e.target.value)}
+              className="w-full bg-transparent py-3 outline-none"
+            />
+          </div>
+        </div>
+      </div>
+
+      <label className="mt-4 block text-sm font-semibold text-gray-950" htmlFor="reg-email">
         E-mail
       </label>
       <div className="mt-2 flex items-center gap-2 rounded-2xl border border-orange-100 bg-white px-4">
-        <Mail className="h-5 w-5 text-primary" />
+        <Mail className="h-5 w-5 shrink-0 text-primary" />
         <input
           id="reg-email"
           type="email"
@@ -140,8 +182,15 @@ export function RegisterForm() {
         </p>
       ) : null}
 
-      <button className="button-primary mt-6 w-full" disabled={loading} type="submit">
-        {loading ? "Cadastrando..." : "Cadastrar"}
+      <button className="button-primary mt-6 flex w-full items-center justify-center gap-2" disabled={loading} type="submit">
+        {loading ? (
+          <>
+            <Loader2 className="h-4 w-4 animate-spin" />
+            Cadastrando...
+          </>
+        ) : (
+          "Cadastrar"
+        )}
       </button>
     </form>
   );

@@ -5,7 +5,8 @@ import { createClient } from "@supabase/supabase-js";
 export async function registerUser(
   email: string,
   password: string,
-  code: string
+  code: string,
+  displayName: string
 ): Promise<{ error?: string; success?: boolean }> {
   if (!process.env.REGISTER_CODE || code !== process.env.REGISTER_CODE) {
     return { error: "Código de acesso inválido." };
@@ -27,7 +28,8 @@ export async function registerUser(
     const { error } = await supabase.auth.admin.createUser({
       email,
       password,
-      email_confirm: true
+      email_confirm: true,
+      user_metadata: { display_name: displayName }
     });
 
     if (error) {

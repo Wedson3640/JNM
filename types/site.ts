@@ -1,9 +1,11 @@
 export type HeroSlide = {
-  label: string;
-  title: string;
-  meta: string;
+  speakerName: string;
+  theme: string;
+  eventDate: string;
+  eventWeekday: string;
+  eventTime: string;
+  platforms: "YouTube" | "Facebook" | "Ambos";
   image: string;
-  ctaUrl?: string | null;
 };
 
 export type FraternalService = [string, string, string];

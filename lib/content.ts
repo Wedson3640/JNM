@@ -35,18 +35,22 @@ export const socialLinks = [
 
 export const heroSlides = [
   {
-    label: "Palestra ao vivo",
-    title: "A verdadeira paz começa em nós",
-    meta: "18/05/2024 · 20h · Auditório da Casa",
-    image:
-      "https://images.unsplash.com/photo-1475721027785-f74eccf877e2?auto=format&fit=crop&w=1400&q=80"
+    speakerName: "Vanessa Castelo Branco",
+    theme: "Família, amor, sexualidade e espiritualidade",
+    eventDate: "09/05/2026",
+    eventWeekday: "Sábado",
+    eventTime: "15h40",
+    platforms: "Ambos" as const,
+    image: "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&w=800&q=80"
   },
   {
-    label: "Estudo doutrinário",
-    title: "Evangelho, convivência e serviço no bem",
-    meta: "Quartas · 19h30 · Sala de Estudos",
-    image:
-      "https://images.unsplash.com/photo-1519389950473-47ba0277781c?auto=format&fit=crop&w=1400&q=80"
+    speakerName: "João Nunes Maia",
+    theme: "A verdadeira paz começa em nós",
+    eventDate: "16/05/2026",
+    eventWeekday: "Sábado",
+    eventTime: "15h40",
+    platforms: "YouTube" as const,
+    image: "https://images.unsplash.com/photo-1560250097-0b93528c311a?auto=format&fit=crop&w=800&q=80"
   }
 ];
 

@@ -69,12 +69,14 @@ export async function getPublicSiteData(): Promise<PublicSiteData> {
 
   return {
     heroSlides: heroResult.data?.length
-      ? heroResult.data.map((row) => ({
-          label: row.label,
-          title: row.title,
-          meta: row.meta,
-          image: row.image_url,
-          ctaUrl: row.cta_url
+      ? heroResult.data.slice(0, 2).map((row) => ({
+          speakerName: row.speaker_name,
+          theme: row.theme,
+          eventDate: row.event_date,
+          eventWeekday: row.event_weekday,
+          eventTime: row.event_time,
+          platforms: row.platforms as "YouTube" | "Facebook" | "Ambos",
+          image: row.image_url
         }))
       : fallback.heroSlides,
     fraternalCare: fraternalResult.data?.length

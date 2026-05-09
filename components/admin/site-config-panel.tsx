@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { Database, LogOut, Pencil, Plus, Trash2 } from "lucide-react";
+import { Database, ImageDown, LogOut, Pencil, Plus, Trash2 } from "lucide-react";
 import { adminSections } from "@/lib/admin-sections";
 import { createSupabaseBrowserClient } from "@/lib/supabase-browser";
 import type { AdminSection } from "@/types/admin";
@@ -188,9 +188,31 @@ export function SiteConfigPanel() {
 
           {message ? <p className="mt-4 rounded-2xl bg-orange-50 p-3 text-sm text-primary">{message}</p> : null}
 
-          <button type="submit" className="button-primary mt-5" disabled={loading}>
-            {loading ? "Salvando..." : "Salvar"}
-          </button>
+          <div className="mt-5 flex flex-wrap gap-3">
+            <button type="submit" className="button-primary" disabled={loading}>
+              {loading ? "Salvando..." : "Salvar"}
+            </button>
+
+            {activeSection.key === "hero_slides" && (
+              <a
+                href={`/api/banner?${new URLSearchParams({
+                  speaker: String(form.speaker_name ?? ""),
+                  theme: String(form.theme ?? ""),
+                  date: String(form.event_date ?? ""),
+                  weekday: String(form.event_weekday ?? ""),
+                  time: String(form.event_time ?? ""),
+                  platforms: String(form.platforms ?? "YouTube"),
+                  photo: String(form.image_url ?? ""),
+                }).toString()}`}
+                target="_blank"
+                rel="noreferrer"
+                className="button-outline inline-flex items-center gap-2"
+              >
+                <ImageDown className="h-4 w-4" />
+                Gerar Banner Instagram
+              </a>
+            )}
+          </div>
         </form>
 
         <div className="card overflow-hidden">
@@ -207,10 +229,10 @@ export function SiteConfigPanel() {
                       {row.status === "published" ? "Publicado" : "Rascunho"}
                     </span>
                     <h3 className="mt-3 text-base font-semibold text-gray-950">
-                      {String(row.title ?? row.name ?? row.weekday ?? row.label ?? "Item")}
+                      {String(row.speaker_name ?? row.title ?? row.name ?? row.weekday ?? row.label ?? "Item")}
                     </h3>
                     <p className="mt-1 line-clamp-2 text-sm text-gray-600">
-                      {String(row.description ?? row.subtitle ?? row.meta ?? row.time ?? row.city ?? "")}
+                      {String(row.theme ?? row.description ?? row.subtitle ?? row.meta ?? row.time ?? row.city ?? "")}
                     </p>
                   </div>
                   <div className="flex flex-wrap items-center gap-2 md:justify-end">

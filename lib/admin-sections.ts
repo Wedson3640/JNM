@@ -4,14 +4,16 @@ export const adminSections: AdminSection[] = [
   {
     key: "hero_slides",
     title: "Palestras em destaque",
-    description: "Atualiza os slides do carrossel principal.",
+    description: "Máximo 2 slides publicados. Campos obrigatórios: palestrante, tema, data, dia, hora e foto.",
     table: "hero_slides",
     fields: [
-      { name: "label", label: "Etiqueta", type: "text", required: true },
-      { name: "title", label: "Título", type: "text", required: true },
-      { name: "meta", label: "Data, horário e local", type: "text", required: true },
-      { name: "image_url", label: "URL da imagem", type: "url", required: true },
-      { name: "cta_url", label: "Link do botão", type: "url" },
+      { name: "speaker_name", label: "Nome do palestrante", type: "text", required: true },
+      { name: "theme", label: "Tema da palestra", type: "text", required: true },
+      { name: "event_date", label: "Data (ex: 09/05/2026)", type: "text", required: true },
+      { name: "event_weekday", label: "Dia da semana (ex: Sábado)", type: "text", required: true },
+      { name: "event_time", label: "Horário (ex: 15h40)", type: "text", required: true },
+      { name: "platforms", label: "Plataformas", type: "select", options: ["YouTube", "Facebook", "Ambos"], required: true },
+      { name: "image_url", label: "URL da foto do palestrante", type: "url", required: true },
       { name: "status", label: "Status", type: "select", options: ["published", "draft"], required: true }
     ]
   },

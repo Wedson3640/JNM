@@ -8,7 +8,7 @@ export const metadata = {
 export default function RegisterPage() {
   return (
     <main className="container-page grid min-h-screen place-items-center py-10">
-      <div className="w-full max-w-md">
+      <div className="w-full max-w-[34rem]">
         <RegisterForm />
       </div>
     </main>
