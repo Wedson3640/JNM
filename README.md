@@ -23,6 +23,29 @@ npm run dev
 
 Acesse `http://localhost:3002`.
 
+## Gestão de usuários
+
+Os usuários com acesso à área interna são gerenciados pelo Supabase Auth.
+
+**Onde os dados ficam:**
+
+| Dado | Local no Supabase |
+|---|---|
+| Usuários cadastrados (email/senha) | Authentication → Users |
+| Registro de acessos à área interna | Table Editor → `user_access_logs` |
+
+**Para cadastrar um novo usuário:**
+
+- Acesse a URL de cadastro (não divulgada publicamente) com o código de acesso definido em `REGISTER_CODE`.
+- Ou crie diretamente pelo painel: **Supabase → Authentication → Users → Add user**.
+
+**Variáveis necessárias para cadastro via interface:**
+
+```env
+SUPABASE_SERVICE_ROLE_KEY=  # Project Settings → API → Service Role Key
+REGISTER_CODE=              # Código secreto definido pela equipe
+```
+
 ## Docker
 
 ```bash
