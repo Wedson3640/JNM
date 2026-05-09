@@ -14,22 +14,27 @@ export async function registerUser(
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
-  if (!supabaseUrl || !serviceKey) {
-    return { error: "Configuração do servidor incompleta." };
+  const placeholders = ["COLE_AQUI", "sua-chave", "seu-codigo"];
+  if (!supabaseUrl || !serviceKey || placeholders.some((p) => serviceKey.includes(p))) {
+    return { error: "Chave do servidor não configurada. Preencha SUPABASE_SERVICE_ROLE_KEY no .env.local." };
   }
 
   const supabase = createClient(supabaseUrl, serviceKey, {
     auth: { autoRefreshToken: false, persistSession: false }
   });
 
-  const { error } = await supabase.auth.admin.createUser({
-    email,
-    password,
-    email_confirm: true
-  });
+  try {
+    const { error } = await supabase.auth.admin.createUser({
+      email,
+      password,
+      email_confirm: true
+    });
 
-  if (error) {
-    return { error: error.message === "User already registered" ? "Este e-mail já está cadastrado." : error.message };
+    if (error) {
+      return { error: error.message === "User already registered" ? "Este e-mail já está cadastrado." : error.message };
+    }
+  } catch {
+    return { error: "Não foi possível conectar ao Supabase. Verifique a chave de serviço." };
   }
 
   return { success: true };
