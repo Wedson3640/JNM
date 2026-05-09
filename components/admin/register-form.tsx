@@ -1,8 +1,47 @@
 "use client";
 
 import { useState } from "react";
-import { KeyRound, Lock, Mail } from "lucide-react";
+import { Eye, EyeOff, KeyRound, Lock, Mail } from "lucide-react";
 import { registerUser } from "@/app/cad_users/actions";
+
+function PasswordInput({
+  id,
+  value,
+  onChange,
+  autoComplete,
+  icon: Icon
+}: {
+  id: string;
+  value: string;
+  onChange: (v: string) => void;
+  autoComplete?: string;
+  icon: React.ElementType;
+}) {
+  const [visible, setVisible] = useState(false);
+
+  return (
+    <div className="mt-2 flex items-center gap-2 rounded-2xl border border-orange-100 bg-white px-4">
+      <Icon className="h-5 w-5 shrink-0 text-primary" />
+      <input
+        id={id}
+        type={visible ? "text" : "password"}
+        autoComplete={autoComplete}
+        required
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        className="w-full bg-transparent py-3 outline-none"
+      />
+      <button
+        type="button"
+        aria-label={visible ? "Ocultar" : "Mostrar"}
+        onClick={() => setVisible((v) => !v)}
+        className="shrink-0 text-gray-400 hover:text-primary"
+      >
+        {visible ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+      </button>
+    </div>
+  );
+}
 
 export function RegisterForm() {
   const [email, setEmail] = useState("");
@@ -66,49 +105,34 @@ export function RegisterForm() {
       <label className="mt-4 block text-sm font-semibold text-gray-950" htmlFor="reg-password">
         Senha
       </label>
-      <div className="mt-2 flex items-center gap-2 rounded-2xl border border-orange-100 bg-white px-4">
-        <Lock className="h-5 w-5 text-primary" />
-        <input
-          id="reg-password"
-          type="password"
-          autoComplete="new-password"
-          required
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          className="w-full bg-transparent py-3 outline-none"
-        />
-      </div>
+      <PasswordInput
+        id="reg-password"
+        value={password}
+        onChange={setPassword}
+        autoComplete="new-password"
+        icon={Lock}
+      />
 
       <label className="mt-4 block text-sm font-semibold text-gray-950" htmlFor="reg-confirm">
         Confirmar senha
       </label>
-      <div className="mt-2 flex items-center gap-2 rounded-2xl border border-orange-100 bg-white px-4">
-        <Lock className="h-5 w-5 text-primary" />
-        <input
-          id="reg-confirm"
-          type="password"
-          autoComplete="new-password"
-          required
-          value={confirm}
-          onChange={(e) => setConfirm(e.target.value)}
-          className="w-full bg-transparent py-3 outline-none"
-        />
-      </div>
+      <PasswordInput
+        id="reg-confirm"
+        value={confirm}
+        onChange={setConfirm}
+        autoComplete="new-password"
+        icon={Lock}
+      />
 
       <label className="mt-4 block text-sm font-semibold text-gray-950" htmlFor="reg-code">
         Código de acesso
       </label>
-      <div className="mt-2 flex items-center gap-2 rounded-2xl border border-orange-100 bg-white px-4">
-        <KeyRound className="h-5 w-5 text-primary" />
-        <input
-          id="reg-code"
-          type="password"
-          required
-          value={code}
-          onChange={(e) => setCode(e.target.value)}
-          className="w-full bg-transparent py-3 outline-none"
-        />
-      </div>
+      <PasswordInput
+        id="reg-code"
+        value={code}
+        onChange={setCode}
+        icon={KeyRound}
+      />
 
       {message ? (
         <p className={`mt-4 rounded-2xl p-3 text-sm ${message.ok ? "bg-emerald-50 text-emerald-700" : "bg-orange-50 text-primary"}`}>
