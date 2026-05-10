@@ -2,13 +2,11 @@ import {
   Baby,
   BookOpen,
   CalendarDays,
-  Camera,
   GraduationCap,
   HandHeart,
   HeartPulse,
   Mail,
   MessageCircleHeart,
-  Play,
   PlayCircle,
   Users,
 } from "lucide-react";
@@ -36,9 +34,9 @@ export const navLinks = [
 ];
 
 export const socialLinks = [
-  { label: "Facebook",  href: "https://www.facebook.com/p/Sociedade-Esp%C3%ADrita-Jo%C3%A3o-Nunes-Maia-100064637804418", icon: Users },
-  { label: "Instagram", href: "https://www.instagram.com/joaonunesmaiateresina/",                                       icon: Camera },
-  { label: "YouTube",   href: "https://www.youtube.com/@sociedadeespiritajoaonunes1414",                                icon: Play },
+  { label: "Facebook",  href: "https://www.facebook.com/p/Sociedade-Esp%C3%ADrita-Jo%C3%A3o-Nunes-Maia-100064637804418", image: "/images/redes%20sociais%5D/icone_facebook.png" },
+  { label: "Instagram", href: "https://www.instagram.com/joaonunesmaiateresina/",                                       image: "/images/redes%20sociais%5D/icone_instagram.png" },
+  { label: "YouTube",   href: "https://www.youtube.com/@sociedadeespiritajoaonunes1414",                                image: "/images/redes%20sociais%5D/icone_youtube.png" },
 ];
 
 export const heroSlides = [

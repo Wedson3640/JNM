@@ -58,9 +58,9 @@ export function Footer() {
         <div>
           <h3 className="mb-3 text-sm font-semibold uppercase text-primary">Redes sociais</h3>
           <div className="mb-3 flex gap-3">
-            {socialLinks.map(({ label, href, icon: Icon }) => (
-              <a key={label} href={href} aria-label={label} className="text-primary hover:scale-110">
-                <Icon className="h-5 w-5" />
+            {socialLinks.map(({ label, href, image }) => (
+              <a key={label} href={href} aria-label={label} target="_blank" rel="noreferrer" className="hover:scale-110 transition-transform">
+                <Image src={image} alt={label} width={24} height={24} className="object-contain" />
               </a>
             ))}
           </div>

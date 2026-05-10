@@ -39,14 +39,16 @@ export function Header() {
 
           <div className="ml-auto flex shrink-0 items-center gap-2">
             <div className="hidden items-center gap-2 sm:flex">
-              {socialLinks.map(({ label, href, icon: Icon }) => (
+              {socialLinks.map(({ label, href, image }) => (
                 <a
                   key={label}
                   href={href}
                   aria-label={label}
-                  className="grid h-8 w-8 place-items-center rounded-full text-primary hover:scale-110 hover:bg-orange-100"
+                  target="_blank"
+                  rel="noreferrer"
+                  className="grid h-8 w-8 place-items-center rounded-full hover:scale-110 hover:bg-orange-100"
                 >
-                  <Icon className="h-4 w-4" />
+                  <Image src={image} alt={label} width={20} height={20} className="object-contain" />
                 </a>
               ))}
             </div>
