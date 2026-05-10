@@ -119,5 +119,70 @@ export const adminSections: AdminSection[] = [
       { name: "icon", label: "Ícone", type: "text" },
       { name: "status", label: "Status", type: "select", options: ["published", "draft"], required: true }
     ]
+  },
+  {
+    key: "creche_maternal1",
+    title: "Maternal 1",
+    description: "Registros e atividades da turma Maternal 1.",
+    table: "creche_turmas",
+    rowFilter: { turma: "Maternal 1" },
+    fields: [
+      { name: "title", label: "Título / Atividade", type: "text", required: true },
+      { name: "description", label: "Descrição / Observação", type: "textarea", required: true },
+      { name: "date", label: "Data (ex: 10/05/2026)", type: "text" },
+      { name: "status", label: "Status", type: "select", options: ["published", "draft"], required: true }
+    ]
+  },
+  {
+    key: "creche_maternal2",
+    title: "Maternal 2",
+    description: "Registros e atividades da turma Maternal 2.",
+    table: "creche_turmas",
+    rowFilter: { turma: "Maternal 2" },
+    fields: [
+      { name: "title", label: "Título / Atividade", type: "text", required: true },
+      { name: "description", label: "Descrição / Observação", type: "textarea", required: true },
+      { name: "date", label: "Data (ex: 10/05/2026)", type: "text" },
+      { name: "status", label: "Status", type: "select", options: ["published", "draft"], required: true }
+    ]
+  },
+  {
+    key: "creche_pre1a",
+    title: "Pré Escola 1 A",
+    description: "Registros e atividades da turma Pré Escola 1 A.",
+    table: "creche_turmas",
+    rowFilter: { turma: "Pré Escola 1 A" },
+    fields: [
+      { name: "title", label: "Título / Atividade", type: "text", required: true },
+      { name: "description", label: "Descrição / Observação", type: "textarea", required: true },
+      { name: "date", label: "Data (ex: 10/05/2026)", type: "text" },
+      { name: "status", label: "Status", type: "select", options: ["published", "draft"], required: true }
+    ]
+  },
+  {
+    key: "creche_pre1b",
+    title: "Pré Escola 1 B",
+    description: "Registros e atividades da turma Pré Escola 1 B.",
+    table: "creche_turmas",
+    rowFilter: { turma: "Pré Escola 1 B" },
+    fields: [
+      { name: "title", label: "Título / Atividade", type: "text", required: true },
+      { name: "description", label: "Descrição / Observação", type: "textarea", required: true },
+      { name: "date", label: "Data (ex: 10/05/2026)", type: "text" },
+      { name: "status", label: "Status", type: "select", options: ["published", "draft"], required: true }
+    ]
+  },
+  {
+    key: "creche_pre2",
+    title: "Pré Escola 2",
+    description: "Registros e atividades da turma Pré Escola 2.",
+    table: "creche_turmas",
+    rowFilter: { turma: "Pré Escola 2" },
+    fields: [
+      { name: "title", label: "Título / Atividade", type: "text", required: true },
+      { name: "description", label: "Descrição / Observação", type: "textarea", required: true },
+      { name: "date", label: "Data (ex: 10/05/2026)", type: "text" },
+      { name: "status", label: "Status", type: "select", options: ["published", "draft"], required: true }
+    ]
   }
 ];

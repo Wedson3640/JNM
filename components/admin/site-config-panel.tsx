@@ -46,19 +46,20 @@ export function SiteConfigPanel({ sectionKeys }: { sectionKeys?: string[] }) {
     }
 
     const supabase = createSupabaseBrowserClient();
-    supabase
-      .from(activeSection.table)
-      .select("*")
-      .order("created_at", { ascending: false })
-      .then(({ data, error }) => {
-        if (error) {
-          setMessage(`Não foi possível carregar ${activeSection.title}. Verifique se a tabela existe no Supabase.`);
-          setRows([]);
-          return;
-        }
-
-        setRows((data ?? []) as RowData[]);
-      });
+    let query = supabase.from(activeSection.table).select("*").order("created_at", { ascending: false });
+    if (activeSection.rowFilter) {
+      for (const [col, val] of Object.entries(activeSection.rowFilter)) {
+        query = query.eq(col, val);
+      }
+    }
+    query.then(({ data, error }) => {
+      if (error) {
+        setMessage(`Não foi possível carregar ${activeSection.title}. Verifique se a tabela existe no Supabase.`);
+        setRows([]);
+        return;
+      }
+      setRows((data ?? []) as RowData[]);
+    });
   }, [activeSection]);
 
   async function save(event: React.FormEvent<HTMLFormElement>) {
@@ -74,6 +75,7 @@ export function SiteConfigPanel({ sectionKeys }: { sectionKeys?: string[] }) {
     setLoading(true);
     const payload = {
       ...form,
+      ...(activeSection.rowFilter ?? {}),
       id: editingId ?? crypto.randomUUID()
     };
 
