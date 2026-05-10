@@ -46,7 +46,7 @@ export function WeeklyScheduleCard({ items }: { items: WeeklyScheduleItem[] }) {
           </div>
         ))}
       </div>
-      <a href="#eventos" className="button-outline mt-5 w-full">
+      <a href="/programacao" className="button-outline mt-5 w-full">
         Ver programação completa
       </a>
     </Card>

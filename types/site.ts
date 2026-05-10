@@ -1,13 +1,3 @@
-export type HeroSlide = {
-  speakerName: string;
-  theme: string;
-  eventDate: string;
-  eventWeekday: string;
-  eventTime: string;
-  platforms: "YouTube" | "Facebook" | "Ambos";
-  image: string;
-};
-
 export type FraternalService = [string, string, string];
 
 export type WeeklyScheduleItem = [string, string, string];
@@ -35,7 +25,6 @@ export type HouseAreaItem = {
 };
 
 export type PublicSiteData = {
-  heroSlides: HeroSlide[];
   fraternalCare: FraternalService[];
   weeklySchedule: WeeklyScheduleItem[];
   events: EventItem[];

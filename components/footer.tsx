@@ -33,12 +33,26 @@ export function Footer() {
 
         <div>
           <h3 className="mb-3 text-sm font-semibold uppercase text-primary">Contato</h3>
-          {contact.slice(0, 3).map(({ label, value, icon: Icon }) => (
-            <p key={label} className="mb-2 flex items-center gap-2 text-sm">
-              <Icon className="h-4 w-4 text-primary" />
-              {value}
-            </p>
-          ))}
+          {contact.slice(0, 3).map((item) => {
+            const Icon = item.icon;
+            return item.href ? (
+              <a
+                key={item.label}
+                href={item.href}
+                target="_blank"
+                rel="noreferrer"
+                className="mb-2 flex items-center gap-2 text-sm font-semibold text-primary hover:text-orange-600"
+              >
+                <Icon className="h-4 w-4" />
+                {item.value}
+              </a>
+            ) : (
+              <p key={item.label} className="mb-2 flex items-center gap-2 text-sm">
+                <Icon className="h-4 w-4 text-primary" />
+                {item.value}
+              </p>
+            );
+          })}
         </div>
 
         <div>
@@ -58,7 +72,9 @@ export function Footer() {
           <p className="text-sm">Segunda a Sábado: 14h às 20h</p>
           <p className="text-sm">Domingo: 08h às 12h</p>
         </div>
+
       </div>
+
       <div className="bg-primary py-3 text-center text-xs font-medium text-white">
         © 2026 Associação Espírita João Nunes Maia. Todos os direitos reservados.
       </div>

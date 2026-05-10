@@ -1,22 +1,17 @@
 import Image from "next/image";
 import Link from "next/link";
 import { LockKeyhole, Search } from "lucide-react";
-import { navigation, socialLinks } from "@/lib/content";
+import { navLinks, socialLinks } from "@/lib/content";
+import { NavDesktop, NavMobile } from "@/components/nav-bar";
 
 const logoJnm = "/images/logo%20JNM%20(1).png";
-
-function sectionHref(item: string) {
-  return `#${item
-    .toLowerCase()
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .replaceAll(" ", "-")}`;
-}
 
 export function Header() {
   return (
     <header className="sticky top-0 z-40 bg-primary px-1 pt-2">
       <div className="mx-auto max-w-screen-2xl rounded-t-[4rem] bg-orange-50 shadow-sm backdrop-blur">
+
+        {/* Linha principal: logo + nav desktop + botões */}
         <div className="container-page flex min-h-28 items-center gap-5 py-4">
           <Link
             href="/"
@@ -40,22 +35,7 @@ export function Header() {
             </div>
           </Link>
 
-          <nav
-            className="hidden flex-1 items-center justify-center gap-5 text-sm font-semibold text-gray-950 xl:flex 2xl:gap-6"
-            aria-label="Principal"
-          >
-            {navigation.map((item, index) => (
-              <a
-                key={item}
-                href={sectionHref(item)}
-                className={`border-b-2 border-transparent py-2 tracking-wide hover:scale-[1.02] hover:border-primary hover:text-primary ${
-                  index === 0 ? "border-primary font-semibold text-primary" : ""
-                }`}
-              >
-                {item}
-              </a>
-            ))}
-          </nav>
+          <NavDesktop items={navLinks} />
 
           <div className="ml-auto flex shrink-0 items-center gap-2">
             <div className="hidden items-center gap-2 sm:flex">
@@ -87,28 +67,8 @@ export function Header() {
           </div>
         </div>
 
-        <nav
-          className="container-page flex gap-2 overflow-x-auto pb-4 text-sm font-semibold text-gray-900 xl:hidden"
-          aria-label="Principal mobile"
-        >
-          {navigation.map((item, index) => (
-            <a
-              key={item}
-              href={sectionHref(item)}
-              className={`shrink-0 rounded-full border border-orange-100 px-4 py-2 hover:bg-orange-100 hover:text-primary ${
-                index === 0 ? "bg-primary text-white hover:bg-orange-600 hover:text-white" : "bg-white"
-              }`}
-            >
-              {item}
-            </a>
-          ))}
-          <Link
-            href="/login"
-            className="shrink-0 rounded-full bg-primary px-4 py-2 text-white hover:bg-orange-600"
-          >
-            Área interna
-          </Link>
-        </nav>
+        {/* Nav mobile */}
+        <NavMobile items={navLinks} />
       </div>
     </header>
   );

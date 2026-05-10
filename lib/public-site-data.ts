@@ -2,7 +2,6 @@ import { createClient } from "@supabase/supabase-js";
 import {
   areas,
   fraternalCare,
-  heroSlides,
   partners,
   studyGroups,
   weeklySchedule
@@ -32,7 +31,6 @@ export async function getPublicSiteData(): Promise<PublicSiteData> {
   const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
   const fallback: PublicSiteData = {
-    heroSlides,
     fraternalCare: fraternalCare as PublicSiteData["fraternalCare"],
     weeklySchedule: weeklySchedule as PublicSiteData["weeklySchedule"],
     events: fallbackEvents,
@@ -50,7 +48,6 @@ export async function getPublicSiteData(): Promise<PublicSiteData> {
   });
 
   const [
-    heroResult,
     fraternalResult,
     scheduleResult,
     eventResult,
@@ -58,7 +55,6 @@ export async function getPublicSiteData(): Promise<PublicSiteData> {
     partnerResult,
     areaResult
   ] = await Promise.all([
-    supabase.from("hero_slides").select("*").eq("status", "published").order("created_at", { ascending: false }),
     supabase.from("fraternal_services").select("*").eq("status", "published").order("created_at", { ascending: true }),
     supabase.from("weekly_schedule").select("*").eq("status", "published").order("created_at", { ascending: true }),
     supabase.from("events").select("*").eq("status", "published").order("created_at", { ascending: false }),
@@ -68,17 +64,6 @@ export async function getPublicSiteData(): Promise<PublicSiteData> {
   ]);
 
   return {
-    heroSlides: heroResult.data?.length
-      ? heroResult.data.slice(0, 2).map((row) => ({
-          speakerName: row.speaker_name,
-          theme: row.theme,
-          eventDate: row.event_date,
-          eventWeekday: row.event_weekday,
-          eventTime: row.event_time,
-          platforms: row.platforms as "YouTube" | "Facebook" | "Ambos",
-          image: row.image_url
-        }))
-      : fallback.heroSlides,
     fraternalCare: fraternalResult.data?.length
       ? fraternalResult.data.map((row) => [row.title, row.days, row.time] as [string, string, string])
       : fallback.fraternalCare,

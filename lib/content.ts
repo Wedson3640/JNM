@@ -2,17 +2,15 @@ import {
   Baby,
   BookOpen,
   CalendarDays,
+  Camera,
   GraduationCap,
   HandHeart,
   HeartPulse,
-  Instagram,
   Mail,
-  MapPin,
   MessageCircleHeart,
-  Phone,
+  Play,
   PlayCircle,
   Users,
-  Youtube
 } from "lucide-react";
 import type { AreaItem, NewsItem, VideoItem } from "@/types/content";
 
@@ -27,10 +25,20 @@ export const navigation = [
   "Contato"
 ];
 
+export const navLinks = [
+  { label: "Início",         href: "#inicio" },
+  { label: "Palestras",      href: "#palestras" },
+  { label: "Creche Miranez", href: "#creche-miranez" },
+  { label: "Programação",    href: "/programacao" },
+  { label: "Notícias",       href: "#noticias" },
+  { label: "Eventos",        href: "#eventos" },
+  { label: "Contato",        href: "#contato" },
+];
+
 export const socialLinks = [
-  { label: "Facebook", href: "https://facebook.com", icon: Users },
-  { label: "Instagram", href: "https://instagram.com", icon: Instagram },
-  { label: "YouTube", href: "https://youtube.com", icon: Youtube }
+  { label: "Facebook",  href: "https://www.facebook.com/p/Sociedade-Esp%C3%ADrita-Jo%C3%A3o-Nunes-Maia-100064637804418", icon: Users },
+  { label: "Instagram", href: "https://www.instagram.com/joaonunesmaiateresina/",                                       icon: Camera },
+  { label: "YouTube",   href: "https://www.youtube.com/@sociedadeespiritajoaonunes1414",                                icon: Play },
 ];
 
 export const heroSlides = [
@@ -62,13 +70,13 @@ export const fraternalCare = [
 ];
 
 export const weeklySchedule = [
-  ["Segunda", "20h", "Palestra Pública"],
-  ["Terça", "15h", "Estudo do Evangelho"],
-  ["Quarta", "20h", "Reunião Mediúnica"],
-  ["Quinta", "20h", "Grupo de Oração"],
-  ["Sexta", "20h", "Palestra Pública"],
-  ["Sábado", "15h", "Evangelização Infantil"],
-  ["Domingo", "09h", "Palestra Pública"]
+  ["Domingo",  "8h30", "Evangelização infantil e grupo de jovens"],
+  ["Segunda",  "8h",   "Atendimento fraterno e passe"],
+  ["Terça",    "19h",  "Reunião pública doutrinária e passe"],
+  ["Quarta",   "14h",  "Atendimento fraterno e vibração"],
+  ["Quinta",   "15h30","Estudo da Mediunidade"],
+  ["Sexta",    "18h30","Reunião de Desobsessão"],
+  ["Sábado",   "14h",  "Atendimento fraterno e espiritual"],
 ];
 
 export const videos: Record<VideoItem["platform"], VideoItem[]> = {
@@ -211,10 +219,8 @@ export const partners = [
 ];
 
 export const contact = [
-  { label: "Telefone", value: "(86) 3222-1234", icon: Phone },
-  { label: "WhatsApp", value: "(86) 98888-1234", icon: MessageCircleHeart },
-  { label: "E-mail", value: "contato@joaonunesmaia.org.br", icon: Mail },
-  { label: "Endereço", value: "Rua da Fraternidade, 123 · Teresina/PI", icon: MapPin },
-  { label: "Eventos", value: "Segunda a sábado: 14h às 20h", icon: CalendarDays },
-  { label: "Palestras", value: "Domingo: 08h às 12h", icon: PlayCircle }
+  { label: "WhatsApp", value: "(86) 9483-1739", icon: MessageCircleHeart, href: "https://wa.me/558694831739" },
+  { label: "E-mail",   value: "contato@joaonunesmaia.org.br", icon: Mail },
+  { label: "Eventos",  value: "Segunda a sábado: 14h às 20h", icon: CalendarDays },
+  { label: "Palestras",value: "Domingo: 08h às 12h", icon: PlayCircle }
 ];
