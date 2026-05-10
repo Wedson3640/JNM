@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { Database, ImageDown, LogOut, Pencil, Plus, Trash2 } from "lucide-react";
+import { ImageDown, Pencil, Plus, Trash2 } from "lucide-react";
 import { adminSections } from "@/lib/admin-sections";
 import { createSupabaseBrowserClient } from "@/lib/supabase-browser";
 import type { AdminSection } from "@/types/admin";
@@ -18,11 +18,16 @@ function emptyData(section: AdminSection): RowData {
   }, {});
 }
 
-export function SiteConfigPanel() {
-  const [activeKey, setActiveKey] = useState(adminSections[0].key);
+export function SiteConfigPanel({ sectionKeys }: { sectionKeys?: string[] }) {
+  const sections = useMemo(
+    () => (sectionKeys ? adminSections.filter((s) => sectionKeys.includes(s.key)) : adminSections),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [sectionKeys?.join(",")]
+  );
+  const [activeKey, setActiveKey] = useState(sections[0]?.key ?? adminSections[0].key);
   const activeSection = useMemo(
-    () => adminSections.find((section) => section.key === activeKey) ?? adminSections[0],
-    [activeKey]
+    () => sections.find((section) => section.key === activeKey) ?? sections[0],
+    [activeKey, sections]
   );
   const [rows, setRows] = useState<RowData[]>([]);
   const [form, setForm] = useState<RowData>(() => emptyData(activeSection));
@@ -99,44 +104,23 @@ export function SiteConfigPanel() {
     }
   }
 
-  async function signOut() {
-    const supabase = createSupabaseBrowserClient();
-    await supabase.auth.signOut();
-    window.location.href = "/login";
-  }
-
   return (
-    <div className="grid gap-6 xl:grid-cols-[320px_1fr]">
-      <aside className="card h-fit p-5">
-        <div className="flex items-center gap-3">
-          <span className="grid h-11 w-11 place-items-center rounded-2xl bg-orange-50 text-primary">
-            <Database className="h-5 w-5" />
-          </span>
-          <div>
-            <p className="text-sm font-semibold uppercase text-primary">Área interna</p>
-            <h1 className="text-2xl font-semibold text-gray-950">Configuração do site</h1>
-          </div>
-        </div>
-
-        <nav className="mt-6 space-y-2" aria-label="Áreas do painel">
-          {adminSections.map((section) => (
+    <div className="grid gap-6 xl:grid-cols-[280px_1fr]">
+      <aside className="card h-fit p-4">
+        <nav className="space-y-1" aria-label="Seções">
+          {sections.map((section) => (
             <button
               key={section.key}
               type="button"
               onClick={() => setActiveKey(section.key)}
-              className={`w-full rounded-2xl px-4 py-3 text-left text-sm font-semibold ${
-                section.key === activeKey ? "bg-primary text-white shadow-md" : "bg-orange-50 text-gray-800 hover:bg-orange-100"
+              className={`w-full rounded-xl px-4 py-3 text-left text-sm font-semibold transition-colors ${
+                section.key === activeKey ? "bg-primary text-white shadow-md" : "text-gray-700 hover:bg-orange-50 hover:text-primary"
               }`}
             >
               {section.title}
             </button>
           ))}
         </nav>
-
-        <button type="button" onClick={signOut} className="button-outline mt-6 w-full">
-          <LogOut className="mr-2 h-4 w-4" />
-          Sair
-        </button>
       </aside>
 
       <section className="space-y-6">
