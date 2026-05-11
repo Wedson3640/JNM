@@ -1,8 +1,8 @@
 import Image from "next/image";
 import Link from "next/link";
-import { LockKeyhole, Search } from "lucide-react";
+import { LockKeyhole } from "lucide-react";
 import { navLinks, socialLinks } from "@/lib/content";
-import { NavDesktop, NavMobile } from "@/components/nav-bar";
+import { NavDesktop, NavMobileMenu } from "@/components/nav-bar";
 
 const logoJnm = "/images/logo%20JNM%20(1).png";
 
@@ -11,14 +11,16 @@ export function Header() {
     <header className="sticky top-0 z-40 bg-primary px-1 pt-2">
       <div className="mx-auto max-w-screen-2xl rounded-t-[4rem] bg-orange-50 shadow-sm backdrop-blur">
 
-        {/* Linha principal: logo + nav desktop + botões */}
-        <div className="container-page flex min-h-28 items-center gap-5 py-4">
+        {/* Linha principal */}
+        <div className="container-page flex min-h-20 items-center gap-4 py-3 sm:min-h-28 sm:py-4">
+
+          {/* Logo */}
           <Link
             href="/"
             className="flex min-w-0 items-center gap-3 rounded-full px-2 py-1 hover:bg-orange-100/60"
             aria-label="Página inicial"
           >
-            <div className="relative h-20 w-20 shrink-0 sm:h-24 sm:w-24">
+            <div className="relative h-14 w-14 shrink-0 sm:h-20 sm:w-20 lg:h-24 lg:w-24">
               <Image
                 src={logoJnm}
                 alt="Associação Espírita João Nunes Maia"
@@ -35,9 +37,13 @@ export function Header() {
             </div>
           </Link>
 
+          {/* Nav desktop */}
           <NavDesktop items={navLinks} />
 
+          {/* Botões à direita */}
           <div className="ml-auto flex shrink-0 items-center gap-2">
+
+            {/* Ícones de redes sociais — apenas sm+ */}
             <div className="hidden items-center gap-2 sm:flex">
               {socialLinks.map(({ label, href, image }) => (
                 <a
@@ -52,6 +58,8 @@ export function Header() {
                 </a>
               ))}
             </div>
+
+            {/* Área interna — apenas lg+ */}
             <Link
               href="/login"
               className="hidden items-center gap-2 rounded-full bg-primary px-4 py-2 text-sm font-semibold text-white shadow-sm hover:scale-[1.02] hover:bg-orange-600 lg:inline-flex"
@@ -59,18 +67,11 @@ export function Header() {
               <LockKeyhole className="h-4 w-4" />
               Área interna
             </Link>
-            <button
-              type="button"
-              aria-label="Buscar"
-              className="grid h-8 w-8 place-items-center rounded-full text-primary hover:scale-110 hover:bg-orange-100"
-            >
-              <Search className="h-4 w-4" />
-            </button>
+
+            {/* Hamburguer — apenas abaixo de xl */}
+            <NavMobileMenu items={navLinks} />
           </div>
         </div>
-
-        {/* Nav mobile */}
-        <NavMobile items={navLinks} />
       </div>
     </header>
   );

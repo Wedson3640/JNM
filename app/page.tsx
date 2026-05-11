@@ -1,3 +1,6 @@
+// Sempre busca dados frescos do Supabase — sem cache estático
+export const revalidate = 0;
+
 import { Footer } from "@/components/footer";
 import { Header } from "@/components/header";
 import { HeroCarousel } from "@/components/home/hero-carousel";

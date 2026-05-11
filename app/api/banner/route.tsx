@@ -2,35 +2,42 @@ import { ImageResponse } from "next/og";
 
 export const runtime = "edge";
 
-const BASE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3002";
-const LOGO_URL = `${BASE_URL}/images/logo%20JNM%20(1).png`;
+const BASE_URL  = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3002";
+const LOGO_JNM  = `${BASE_URL}/images/logo%20JNM%20(1).png`;
+const LOGO_UEPI = `${BASE_URL}/images/UEPI.png`;
+
+const RAINBOW = ["#ff4444", "#ff9900", "#ffee00", "#00cc66", "#4488ff", "#aa44ff"];
+
+function titleCase(s: string) {
+  return s.split(" ").map((w) => (w ? w.charAt(0).toUpperCase() + w.slice(1).toLowerCase() : "")).join(" ");
+}
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
 
-  const speaker = searchParams.get("speaker") ?? "";
-  const theme = searchParams.get("theme") ?? "";
-  const date = searchParams.get("date") ?? "";
-  const weekday = searchParams.get("weekday") ?? "";
-  const time = searchParams.get("time") ?? "";
-  const platforms = searchParams.get("platforms") ?? "YouTube";
-  const photo = searchParams.get("photo") ?? "";
+  const speaker   = searchParams.get("speaker")   ?? "";
+  const theme     = titleCase(searchParams.get("theme") ?? "");
+  const date      = searchParams.get("date")       ?? "";
+  const weekday   = searchParams.get("weekday")    ?? "";
+  const time      = searchParams.get("time")       ?? "";
+  const platforms = searchParams.get("platforms")  ?? "YouTube";
+  const photo     = searchParams.get("photo")      ?? "";
 
   const showFb = platforms === "Facebook" || platforms === "Ambos";
-  const showYt = platforms === "YouTube" || platforms === "Ambos";
+  const showYt = platforms === "YouTube"  || platforms === "Ambos";
 
   const [fontBold, fontExtraBold] = await Promise.all([
-    fetch("https://fonts.gstatic.com/s/poppins/v21/pxiByp8kv8JHgFVrLCz7Z1xlFd2JQEk.woff2")
+    fetch("https://raw.githubusercontent.com/google/fonts/main/ofl/poppins/Poppins-Bold.ttf")
       .then((r) => r.arrayBuffer())
       .catch(() => null),
-    fetch("https://fonts.gstatic.com/s/poppins/v21/pxiByp8kv8JHgFVrLDD4Z1xlFd2JQEk.woff2")
+    fetch("https://raw.githubusercontent.com/google/fonts/main/ofl/poppins/Poppins-ExtraBold.ttf")
       .then((r) => r.arrayBuffer())
       .catch(() => null),
   ]);
 
   type FontWeight = 100 | 200 | 300 | 400 | 500 | 600 | 700 | 800 | 900;
   const fonts: { name: string; data: ArrayBuffer; weight: FontWeight; style: "normal" }[] = [];
-  if (fontBold) fonts.push({ name: "Poppins", data: fontBold, weight: 700, style: "normal" });
+  if (fontBold)      fonts.push({ name: "Poppins", data: fontBold,      weight: 700, style: "normal" });
   if (fontExtraBold) fonts.push({ name: "Poppins", data: fontExtraBold, weight: 800, style: "normal" });
 
   const fontFamily = fonts.length ? "Poppins" : "sans-serif";
@@ -55,6 +62,21 @@ export async function GET(request: Request) {
           ))}
         </div>
 
+        {/* Rainbow arco inferior — 6 anéis sobrepostos */}
+        {RAINBOW.map((color, i) => (
+          <div key={i} style={{
+            position: "absolute",
+            bottom: -390 + i * 7,
+            left: "-25%",
+            width: "150%",
+            height: 570,
+            borderRadius: "50%",
+            border: `5px solid ${color}`,
+            background: "transparent",
+            opacity: 0.6,
+          }} />
+        ))}
+
         {/* Área principal */}
         <div style={{ display: "flex", flex: 1, alignItems: "center", padding: "80px 70px 50px 70px", gap: 50 }}>
 
@@ -71,7 +93,7 @@ export async function GET(request: Request) {
           </div>
 
           {/* Informações */}
-          <div style={{ display: "flex", flexDirection: "column", flex: 1, gap: 30 }}>
+          <div style={{ display: "flex", flexDirection: "column", flex: 1, gap: 26 }}>
 
             {/* Plataformas */}
             <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
@@ -95,15 +117,15 @@ export async function GET(request: Request) {
               <div style={{ flex: 1, height: 2, background: "#c4b5fd" }} />
             </div>
 
-            {/* Nome */}
-            <div style={{ fontSize: 78, fontWeight: 800, color: "#1F2937", lineHeight: 1.1, display: "flex", flexWrap: "wrap" }}>
+            {/* Nome — 30% menor: 78 → 55 */}
+            <div style={{ fontSize: 55, fontWeight: 800, color: "#1F2937", lineHeight: 1.1, display: "flex", flexWrap: "wrap" }}>
               {speaker}
             </div>
 
             {/* Tema */}
             <div style={{ display: "flex", flexDirection: "column", borderLeft: "8px solid #a78bfa", paddingLeft: 28, gap: 10 }}>
               <div style={{ fontSize: 22, fontWeight: 700, letterSpacing: "0.22em", color: "#7c3aed" }}>TEMA</div>
-              <div style={{ fontSize: 44, fontWeight: 600, color: "#1F2937", lineHeight: 1.3, display: "flex", flexWrap: "wrap" }}>{theme}</div>
+              <div style={{ fontSize: 40, fontWeight: 600, color: "#1F2937", lineHeight: 1.3, display: "flex", flexWrap: "wrap" }}>{theme}</div>
             </div>
 
             {/* Data e hora */}
@@ -118,12 +140,19 @@ export async function GET(request: Request) {
           </div>
         </div>
 
-        {/* Rodapé */}
-        <div style={{ display: "flex", alignItems: "center", gap: 24, padding: "24px 70px", background: "rgba(255,255,255,0.55)", borderTop: "2px solid rgba(196,181,253,0.4)" }}>
-          <img src={LOGO_URL} width={76} height={76} style={{ objectFit: "contain" }} />
-          <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
-            <div style={{ fontSize: 26, color: "#6b7280" }}>Sociedade Espírita</div>
-            <div style={{ fontSize: 36, fontWeight: 700, color: "#f97316" }}>João Nunes Maia</div>
+        {/* Rodapé com arco-íris */}
+        <div style={{ display: "flex", flexDirection: "column" }}>
+          {/* Faixa arco-íris */}
+          <div style={{ height: 6, background: "linear-gradient(90deg, #ff4444, #ff9900, #ffee00, #00cc66, #4488ff, #aa44ff)" }} />
+          {/* Conteúdo do rodapé */}
+          <div style={{ display: "flex", alignItems: "center", gap: 24, padding: "18px 70px", background: "rgba(255,255,255,0.72)" }}>
+            <img src={LOGO_JNM} width={114} height={114} style={{ objectFit: "contain" }} />
+            <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+              <div style={{ fontSize: 26, color: "#6b7280" }}>Sociedade Espírita</div>
+              <div style={{ fontSize: 36, fontWeight: 700, color: "#f97316" }}>João Nunes Maia</div>
+            </div>
+            <div style={{ flex: 1 }} />
+            <img src={LOGO_UEPI} width={100} height={100} style={{ objectFit: "contain" }} />
           </div>
         </div>
       </div>

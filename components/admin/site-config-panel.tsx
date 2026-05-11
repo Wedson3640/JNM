@@ -18,7 +18,7 @@ function emptyData(section: AdminSection): RowData {
   }, {});
 }
 
-export function SiteConfigPanel({ sectionKeys }: { sectionKeys?: string[] }) {
+export function SiteConfigPanel({ sectionKeys, layout = "sidebar" }: { sectionKeys?: string[]; layout?: "sidebar" | "tabs" }) {
   const sections = useMemo(
     () => (sectionKeys ? adminSections.filter((s) => sectionKeys.includes(s.key)) : adminSections),
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -107,23 +107,47 @@ export function SiteConfigPanel({ sectionKeys }: { sectionKeys?: string[] }) {
   }
 
   return (
-    <div className="grid gap-6 xl:grid-cols-[280px_1fr]">
-      <aside className="card h-fit p-4">
-        <nav className="space-y-1" aria-label="Seções">
+    <div className="space-y-4">
+      {/* ── Tabs horizontais ── */}
+      {layout === "tabs" && (
+        <div className="flex flex-wrap gap-2 border-b border-gray-200 pb-3">
           {sections.map((section) => (
             <button
               key={section.key}
               type="button"
               onClick={() => setActiveKey(section.key)}
-              className={`w-full rounded-xl px-4 py-3 text-left text-sm font-semibold transition-colors ${
-                section.key === activeKey ? "bg-primary text-white shadow-md" : "text-gray-700 hover:bg-orange-50 hover:text-primary"
+              className={`rounded-lg px-4 py-2 text-sm font-semibold transition-colors ${
+                section.key === activeKey
+                  ? "bg-primary text-white shadow-sm"
+                  : "border border-gray-200 bg-white text-gray-600 hover:bg-orange-50 hover:text-primary"
               }`}
             >
               {section.title}
             </button>
           ))}
-        </nav>
-      </aside>
+        </div>
+      )}
+
+      <div className={layout === "sidebar" ? "grid gap-6 xl:grid-cols-[280px_1fr]" : ""}>
+        {/* ── Sidebar vertical (layout padrão) ── */}
+        {layout === "sidebar" && (
+          <aside className="card h-fit p-4">
+            <nav className="space-y-1" aria-label="Seções">
+              {sections.map((section) => (
+                <button
+                  key={section.key}
+                  type="button"
+                  onClick={() => setActiveKey(section.key)}
+                  className={`w-full rounded-xl px-4 py-3 text-left text-sm font-semibold transition-colors ${
+                    section.key === activeKey ? "bg-primary text-white shadow-md" : "text-gray-700 hover:bg-orange-50 hover:text-primary"
+                  }`}
+                >
+                  {section.title}
+                </button>
+              ))}
+            </nav>
+          </aside>
+        )}
 
       <section className="space-y-6">
         <form onSubmit={save} className="card p-5">
@@ -250,6 +274,7 @@ export function SiteConfigPanel({ sectionKeys }: { sectionKeys?: string[] }) {
           </div>
         </div>
       </section>
+      </div>
     </div>
   );
 }
