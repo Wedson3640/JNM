@@ -71,6 +71,7 @@ function HeroSlidesManager() {
   const [previewWeb,       setPreviewWeb]       = useState<string | null>(null);
   const [previewInsta,     setPreviewInsta]     = useState<string | null>(null);
   const [previewTab,       setPreviewTab]       = useState<"web" | "insta">("web");
+  const [previewError,     setPreviewError]     = useState<string | null>(null);
   const [downloading,      setDownloading]      = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
 
@@ -140,25 +141,33 @@ function HeroSlidesManager() {
     setGeneratingBanner(true);
     setPreviewWeb(null);
     setPreviewInsta(null);
-    const [webUrl, instaUrl] = await Promise.all([
-      uploadBannerToStorage(payload.id, bannerWebUrl(form), "-web"),
+    setPreviewError(null);
+    const [, instaUrl] = await Promise.all([
+      Promise.resolve(null),
       uploadBannerToStorage(payload.id, bannerUrl(form)),
     ]);
     setGeneratingBanner(false);
 
-    const bannerUpdates: Partial<HeroSlide> = {};
-    if (webUrl)   { bannerUpdates.banner_web_url = webUrl;   payload.banner_web_url = webUrl; }
-    if (instaUrl) { bannerUpdates.banner_url     = instaUrl; payload.banner_url     = instaUrl; }
-    if (Object.keys(bannerUpdates).length) {
-      await supabase.from("hero_slides").update(bannerUpdates).eq("id", payload.id);
-    }
+    const webPreviewUrl = bannerWebUrl(form);
+    const instaPreviewUrl = instaUrl ?? bannerUrl(form);
+    const bannerUpdates: Partial<HeroSlide> = {
+      banner_web_url: webPreviewUrl,
+      banner_url: instaPreviewUrl,
+    };
+    payload.banner_web_url = webPreviewUrl;
+    payload.banner_url = instaPreviewUrl;
+    const { error: bannerUpdateError } = await supabase.from("hero_slides").update(bannerUpdates).eq("id", payload.id);
 
-    setPreviewWeb(webUrl   ?? bannerWebUrl(form));
-    setPreviewInsta(instaUrl ?? bannerUrl(form));
+    setPreviewWeb(webPreviewUrl);
+    setPreviewInsta(instaPreviewUrl);
     setPreviewTab("web");
 
     setSlides((prev) => [payload, ...prev.filter((s) => s.id !== payload.id)]);
-    setMessage({ text: "Salvo com sucesso! Banners gerados →", ok: true });
+    setMessage(
+      bannerUpdateError
+        ? { text: `Palestra salva, mas a URL do banner não foi gravada: ${bannerUpdateError.message}`, ok: false }
+        : { text: "Salvo com sucesso! Banners gerados →", ok: true }
+    );
     setEditingId(null);
     setForm({ ...EMPTY });
   }
@@ -534,14 +543,22 @@ function HeroSlidesManager() {
             </div>
           ) : (previewTab === "web" ? previewWeb : previewInsta) ? (
             <>
-              <div className="overflow-hidden rounded-xl border border-gray-100">
+              <div className={`relative overflow-hidden rounded-xl border border-gray-100 bg-gray-50 ${
+                previewTab === "web" ? "aspect-[12/5]" : "aspect-[4/5]"
+              }`}>
                 <img
                   key={previewTab === "web" ? previewWeb! : previewInsta!}
                   src={previewTab === "web" ? previewWeb! : previewInsta!}
                   alt="Banner preview"
-                  className="w-full"
+                  className="absolute inset-0 h-full w-full object-contain"
+                  onError={() => setPreviewError(`Não foi possível carregar o banner ${previewTab === "web" ? "do site" : "do Instagram"}. Salve novamente ou reinicie o servidor local.`)}
                 />
               </div>
+              {previewError ? (
+                <p className="mt-2 rounded-lg bg-red-50 px-3 py-2 text-xs font-semibold text-red-600">
+                  {previewError}
+                </p>
+              ) : null}
               <button
                 type="button"
                 onClick={downloadBanner}

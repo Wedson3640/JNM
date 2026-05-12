@@ -45,7 +45,6 @@ function PasswordInput({
 
 export function RegisterForm() {
   const [firstName, setFirstName] = useState("");
-  const [lastName, setLastName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
@@ -68,7 +67,7 @@ export function RegisterForm() {
     }
 
     setLoading(true);
-    const displayName = `${firstName.trim()} ${lastName.trim()}`.trim();
+    const displayName = firstName.trim();
     const result = await registerUser(email, password, code, displayName);
     setLoading(false);
 
@@ -79,7 +78,6 @@ export function RegisterForm() {
 
     setMessage({ text: "Usuário criado com sucesso. Acesse a área interna pelo link de login.", ok: true });
     setFirstName("");
-    setLastName("");
     setEmail("");
     setPassword("");
     setConfirm("");
@@ -91,40 +89,22 @@ export function RegisterForm() {
       <h1 className="text-2xl font-semibold text-gray-950">Cadastro de acesso</h1>
       <p className="mt-2 text-sm">Crie uma conta para acessar a área interna.</p>
 
-      <div className="mt-6 grid grid-cols-2 gap-3">
-        <div>
-          <label className="block text-sm font-semibold text-gray-950" htmlFor="reg-firstname">
-            Nome
-          </label>
-          <div className="mt-2 flex items-center gap-2 rounded-2xl border border-orange-100 bg-white px-4">
-            <User className="h-5 w-5 shrink-0 text-primary" />
-            <input
-              id="reg-firstname"
-              type="text"
-              autoComplete="given-name"
-              required
-              value={firstName}
-              onChange={(e) => setFirstName(e.target.value)}
-              className="w-full bg-transparent py-3 outline-none"
-            />
-          </div>
-        </div>
-        <div>
-          <label className="block text-sm font-semibold text-gray-950" htmlFor="reg-lastname">
-            Sobrenome
-          </label>
-          <div className="mt-2 flex items-center gap-2 rounded-2xl border border-orange-100 bg-white px-4">
-            <User className="h-5 w-5 shrink-0 text-primary" />
-            <input
-              id="reg-lastname"
-              type="text"
-              autoComplete="family-name"
-              required
-              value={lastName}
-              onChange={(e) => setLastName(e.target.value)}
-              className="w-full bg-transparent py-3 outline-none"
-            />
-          </div>
+      <div className="mt-6">
+        <label className="block text-sm font-semibold text-gray-950" htmlFor="reg-firstname">
+          Nome
+        </label>
+        <div className="mt-2 flex items-center gap-2 rounded-2xl border border-orange-100 bg-white px-4">
+          <User className="h-5 w-5 shrink-0 text-primary" />
+          <input
+            id="reg-firstname"
+            type="text"
+            autoComplete="name"
+            placeholder="nome e sobrenome"
+            required
+            value={firstName}
+            onChange={(e) => setFirstName(e.target.value)}
+            className="w-full bg-transparent py-3 outline-none"
+          />
         </div>
       </div>
 

@@ -6,8 +6,6 @@ const BASE_URL  = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3002";
 const LOGO_JNM  = `${BASE_URL}/images/logo%20JNM%20(1).png`;
 const LOGO_UEPI = `${BASE_URL}/images/UEPI.png`;
 
-const RAINBOW = ["#ff4444", "#ff9900", "#ffee00", "#00cc66", "#4488ff", "#aa44ff"];
-
 function titleCase(s: string) {
   return s.split(" ").map((w) => (w ? w.charAt(0).toUpperCase() + w.slice(1).toLowerCase() : "")).join(" ");
 }
@@ -63,20 +61,6 @@ export async function GET(request: Request) {
         </div>
 
         {/* Rainbow arco inferior — 6 anéis sobrepostos */}
-        {RAINBOW.map((color, i) => (
-          <div key={i} style={{
-            position: "absolute",
-            bottom: -390 + i * 7,
-            left: "-25%",
-            width: "150%",
-            height: 570,
-            borderRadius: "50%",
-            border: `5px solid ${color}`,
-            background: "transparent",
-            opacity: 0.6,
-          }} />
-        ))}
-
         {/* Área principal */}
         <div style={{ display: "flex", flex: 1, alignItems: "center", padding: "80px 70px 50px 70px", gap: 50 }}>
 
@@ -140,10 +124,10 @@ export async function GET(request: Request) {
           </div>
         </div>
 
-        {/* Rodapé com arco-íris */}
+        {/* Rodapé */}
         <div style={{ display: "flex", flexDirection: "column" }}>
-          {/* Faixa arco-íris */}
-          <div style={{ height: 6, background: "linear-gradient(90deg, #ff4444, #ff9900, #ffee00, #00cc66, #4488ff, #aa44ff)" }} />
+          {/* Faixa superior */}
+          <div style={{ height: 6, background: "#8b5cf6", opacity: 0.8 }} />
           {/* Conteúdo do rodapé */}
           <div style={{ display: "flex", alignItems: "center", gap: 24, padding: "18px 70px", background: "rgba(255,255,255,0.72)" }}>
             <img src={LOGO_JNM} width={114} height={114} style={{ objectFit: "contain" }} />
