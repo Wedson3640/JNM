@@ -1,4 +1,4 @@
-import { createSupabaseServerClient } from "@/lib/supabase-server";
+import { createSupabaseServerClient, hasSupabaseServerConfig } from "@/lib/supabase-server";
 import { Baby, HandHeart, LayoutDashboard, Mic2 } from "lucide-react";
 import Link from "next/link";
 
@@ -29,16 +29,21 @@ const cards = [
 ];
 
 export default async function AdminPage() {
-  const supabase = createSupabaseServerClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  let user: { id: string; email?: string } | null = null;
 
-  if (user) {
-    await supabase.from("user_access_logs").insert({
-      user_id: user.id,
-      email: user.email,
-      action: "admin_access",
-      path: "/admin",
-    });
+  if (hasSupabaseServerConfig()) {
+    const supabase = createSupabaseServerClient();
+    const { data } = await supabase.auth.getUser();
+    user = data.user;
+
+    if (user) {
+      await supabase.from("user_access_logs").insert({
+        user_id: user.id,
+        email: user.email,
+        action: "admin_access",
+        path: "/admin",
+      });
+    }
   }
 
   return (

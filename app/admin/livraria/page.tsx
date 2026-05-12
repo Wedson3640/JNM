@@ -12,7 +12,7 @@ import {
   Trash2,
   X,
 } from "lucide-react";
-import { createSupabaseBrowserClient } from "@/lib/supabase-browser";
+import { createSupabaseBrowserClient, hasSupabaseBrowserConfig } from "@/lib/supabase-browser";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 type Livro = {
@@ -42,8 +42,6 @@ function fmt(v: number) {
 
 // ── Componente principal ──────────────────────────────────────────────────────
 export default function LivrariaAdminPage() {
-  const supabase = createSupabaseBrowserClient();
-
   const [livros, setLivros]       = useState<Livro[]>([]);
   const [loading, setLoading]     = useState(true);
   const [saving, setSaving]       = useState(false);
@@ -58,6 +56,14 @@ export default function LivrariaAdminPage() {
   // ── Fetch ────────────────────────────────────────────────────────────────
   async function fetchLivros() {
     setLoading(true);
+    if (!hasSupabaseBrowserConfig()) {
+      setError("Supabase não configurado. Preencha as variáveis NEXT_PUBLIC_SUPABASE_URL e NEXT_PUBLIC_SUPABASE_ANON_KEY.");
+      setLivros([]);
+      setLoading(false);
+      return;
+    }
+
+    const supabase = createSupabaseBrowserClient();
     const { data } = await supabase
       .from("livros")
       .select("*")
@@ -78,6 +84,9 @@ export default function LivrariaAdminPage() {
 
   async function uploadCapa(livroId: string): Promise<string | null> {
     if (!capaFile) return form.capa_url;
+    if (!hasSupabaseBrowserConfig()) return null;
+
+    const supabase = createSupabaseBrowserClient();
     const ext  = capaFile.name.split(".").pop() ?? "jpg";
     const path = `${livroId}.${ext}`;
     const { error } = await supabase.storage
@@ -96,6 +105,12 @@ export default function LivrariaAdminPage() {
     setSaving(true);
 
     try {
+      if (!hasSupabaseBrowserConfig()) {
+        setError("Supabase não configurado. Não foi possível salvar.");
+        return;
+      }
+
+      const supabase = createSupabaseBrowserClient();
       if (editId) {
         // Update
         const capa_url = await uploadCapa(editId);
@@ -126,6 +141,12 @@ export default function LivrariaAdminPage() {
   // ── Delete ───────────────────────────────────────────────────────────────
   async function deleteLivro(id: string) {
     if (!confirm("Remover este livro?")) return;
+    if (!hasSupabaseBrowserConfig()) {
+      setError("Supabase não configurado. Não foi possível remover.");
+      return;
+    }
+
+    const supabase = createSupabaseBrowserClient();
     await supabase.from("livros").delete().eq("id", id);
     setLivros((prev) => prev.filter((l) => l.id !== id));
   }

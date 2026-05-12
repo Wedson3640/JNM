@@ -19,7 +19,7 @@ import {
   User,
   Users,
 } from "lucide-react";
-import { createSupabaseBrowserClient } from "@/lib/supabase-browser";
+import { createSupabaseBrowserClient, hasSupabaseBrowserConfig } from "@/lib/supabase-browser";
 
 interface Book {
   id: string;
@@ -89,7 +89,6 @@ function fmt(value: number) {
 }
 
 export default function LivrariaPage() {
-  const supabase = createSupabaseBrowserClient();
   const [books, setBooks] = useState<Book[]>(fallbackBooks);
   const [cart, setCart] = useState<CartItem[]>([
     { book: fallbackBooks[0], qty: 1 },
@@ -100,6 +99,11 @@ export default function LivrariaPage() {
 
   useEffect(() => {
     async function loadBooks() {
+      if (!hasSupabaseBrowserConfig()) {
+        return;
+      }
+
+      const supabase = createSupabaseBrowserClient();
       const { data } = await supabase
         .from("livros")
         .select("id, titulo, autor, preco, descricao, capa_url, estoque")
@@ -152,6 +156,12 @@ export default function LivrariaPage() {
 
     const whatsapp = window.prompt("Informe seu WhatsApp para avisarmos quando houver estoque:");
 
+    if (!hasSupabaseBrowserConfig()) {
+      setInterestMessage("Cadastro de interesse indisponível no momento. Tente novamente mais tarde.");
+      return;
+    }
+
+    const supabase = createSupabaseBrowserClient();
     const { error } = await supabase.from("livro_interesses").insert({
       livro_id: book.id,
       livro_titulo: book.titulo,
