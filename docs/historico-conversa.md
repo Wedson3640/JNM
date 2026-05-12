@@ -1,6 +1,6 @@
 # Histórico da Conversa - Projeto JNM
 
-Data de referência: 2026-05-08
+Data de referência: 2026-05-11
 
 ## Projeto
 
@@ -444,3 +444,27 @@ Ambos passaram sem erros após os ajustes principais.
 - Configurar URLs de Auth no Supabase para produção.
 - Cadastrar conteúdos reais pelo painel `/admin`.
 - Futuramente avaliar migração planejada para Next 16.
+
+## Atualização de 2026-05-11
+
+Foi criada a documentação de histórico da conversa dentro do projeto:
+
+```text
+docs/historico-conversa.md
+```
+
+Objetivo:
+
+- manter registro das decisões técnicas;
+- facilitar retomada do projeto;
+- documentar comandos usados;
+- registrar pendências de deploy, domínio, Supabase e conteúdo.
+
+Estado atual conhecido:
+
+- projeto local está estruturado;
+- schema do Supabase foi executado com sucesso;
+- área interna `/admin` está preparada para gerenciar os principais blocos do site;
+- favicon e rodapé foram atualizados;
+- repositório GitHub foi conectado;
+- ainda é necessário confirmar o deploy final na Vercel após resolver a permissão do autor do commit.

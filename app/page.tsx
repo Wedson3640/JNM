@@ -7,16 +7,16 @@ import { HeroCarousel } from "@/components/home/hero-carousel";
 import { NewsAreasEvents } from "@/components/home/news-areas-events";
 import { FraternalCareCard, WeeklyScheduleCard } from "@/components/home/sidebar-card";
 import { StudiesPartners } from "@/components/home/studies-partners";
-import { VideoSection } from "@/components/home/video-section";
+import { SocialVideosSection } from "@/components/social/SocialVideosSection";
 import { getPublishedNews } from "@/lib/public-news";
-import { getPublishedVideos } from "@/lib/public-media";
+import { getSocialVideos } from "@/lib/social/get-social-videos";
 import { getPublicSiteData } from "@/lib/public-site-data";
 import { getPublishedLectures } from "@/services/lectures";
 
 export default async function HomePage() {
   const [news, videosByPlatform, siteData, lectures] = await Promise.all([
     getPublishedNews(),
-    getPublishedVideos(),
+    getSocialVideos(),
     getPublicSiteData(),
     getPublishedLectures(),
   ]);
@@ -36,7 +36,7 @@ export default async function HomePage() {
             <WeeklyScheduleCard items={siteData.weeklySchedule} />
           </div>
         </div>
-        <VideoSection videosByPlatform={videosByPlatform} />
+        <SocialVideosSection videosByPlatform={videosByPlatform} />
         <NewsAreasEvents news={news} areas={siteData.houseAreas} events={siteData.events} />
         <StudiesPartners studyGroups={siteData.studyGroups} partners={siteData.partners} />
 

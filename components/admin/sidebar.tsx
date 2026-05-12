@@ -3,15 +3,16 @@
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Baby, HandHeart, LayoutDashboard, Mic2 } from "lucide-react";
+import { Baby, BookOpen, HandHeart, LayoutDashboard, Mic2 } from "lucide-react";
 
 const logoJnm = "/images/logo%20JNM%20(1).png";
 
 const navItems = [
-  { label: "Dashboard",       href: "/admin",          icon: LayoutDashboard },
-  { label: "Creche Miranez",  href: "/admin/creche",   icon: Baby },
-  { label: "Config. Palestra",href: "/admin/palestras", icon: Mic2 },
-  { label: "Serv. Sociais",   href: "/admin/servicos",  icon: HandHeart },
+  { label: "Dashboard",       href: "/admin",          icon: LayoutDashboard, external: false },
+  { label: "Creche Miranez",  href: "/admin/creche",   icon: Baby,            external: false },
+  { label: "Config. Palestra",href: "/admin/palestras", icon: Mic2,            external: false },
+  { label: "Serv. Sociais",   href: "/admin/servicos",  icon: HandHeart,       external: false },
+  { label: "Livraria",        href: "/admin/livraria",  icon: BookOpen,        external: false },
 ];
 
 export function Sidebar() {
@@ -32,12 +33,14 @@ export function Sidebar() {
 
       {/* Nav */}
       <nav className="flex-1 space-y-1 px-3 py-4">
-        {navItems.map(({ label, href, icon: Icon }) => {
+        {navItems.map(({ label, href, icon: Icon, external }) => {
           const active = pathname === href;
           return (
             <Link
               key={href}
               href={href}
+              target={external ? "_blank" : undefined}
+              rel={external ? "noopener noreferrer" : undefined}
               className={`flex items-center gap-3 rounded-lg px-4 py-3 text-sm font-semibold transition-colors ${
                 active
                   ? "bg-primary text-white shadow-md"

@@ -15,7 +15,6 @@ import type { AreaItem, NewsItem, VideoItem } from "@/types/content";
 export const navigation = [
   "Início",
   "A Casa",
-  "Palestras",
   "Estudos",
   "Eventos",
   "Notícias",
@@ -25,7 +24,7 @@ export const navigation = [
 
 export const navLinks = [
   { label: "Início",         href: "#inicio" },
-  { label: "Palestras",      href: "#palestras" },
+  { label: "Livraria",       href: "/livraria" },
   { label: "Creche Miranez", href: "#creche-miranez" },
   { label: "Programação",    href: "/programacao" },
   { label: "Notícias",       href: "#noticias" },

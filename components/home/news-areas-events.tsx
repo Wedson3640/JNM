@@ -84,9 +84,6 @@ export function NewsAreasEvents({
           <p className="mt-3 text-sm">
             {featuredEvent?.description ?? "Venha conhecer, aprender e se inspirar."}
           </p>
-          <a href="#eventos" className="button-primary mt-5 py-2">
-            Saiba mais
-          </a>
         </article>
 
         <div className="space-y-3">
@@ -103,17 +100,11 @@ export function NewsAreasEvents({
                 <div>
                   <h3 className="text-sm font-semibold uppercase text-gray-950">{title}</h3>
                   <p className="text-sm">{description}</p>
-                  <a className="button-outline mt-2 px-3 py-2 text-xs" href="#eventos">
-                    Saiba mais
-                  </a>
                 </div>
               </article>
             );
           })}
         </div>
-        <a href="#eventos" className="button-outline mt-4 w-full">
-          Ver todos os eventos
-        </a>
       </Card>
     </section>
   );

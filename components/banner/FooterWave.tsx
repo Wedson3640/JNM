@@ -1,6 +1,6 @@
 export function FooterWave() {
   return (
-    <div className="pointer-events-none absolute bottom-0 left-0 right-0 z-20 h-[130px] sm:h-[148px]">
+    <div className="pointer-events-none absolute bottom-0 left-0 right-0 z-20 h-[124px] sm:h-[138px]">
       <svg
         viewBox="0 0 1280 150"
         preserveAspectRatio="none"
@@ -20,11 +20,11 @@ export function FooterWave() {
           </linearGradient>
         </defs>
         <path
-          d="M0 150 C116 34 230 14 392 32 L1110 32 C1185 32 1238 60 1280 112 L1280 150 Z"
+          d="M0 150 C56 76 134 46 252 42 L1028 42 C1150 44 1234 74 1280 150 L1280 150 Z"
           fill="url(#bannerFooterFill)"
         />
         <path
-          d="M0 150 C116 34 230 14 392 32 L1110 32 C1185 32 1238 60 1280 112"
+          d="M0 150 C56 76 134 46 252 42 L1028 42 C1150 44 1234 74 1280 150"
           fill="none"
           stroke="url(#bannerFooterStroke)"
           strokeWidth="4"
@@ -32,7 +32,7 @@ export function FooterWave() {
       </svg>
 
       {/* Logos — JNM +40%: h-11→h-[62px] sm:h-14→sm:h-[78px] | UEPI +40%: h-12→h-[67px] */}
-      <div className="relative z-10 flex h-full items-end justify-center gap-5 px-8 pb-4 sm:gap-8 sm:pb-5">
+      <div className="relative z-10 flex h-full items-end justify-center gap-5 px-8 pb-3 sm:gap-8 sm:pb-4">
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
           src="/images/logo%20JNM%20horizontal.png"

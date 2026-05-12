@@ -251,3 +251,62 @@ create trigger partners_set_updated_at before update on public.partners for each
 
 drop trigger if exists house_areas_set_updated_at on public.house_areas;
 create trigger house_areas_set_updated_at before update on public.house_areas for each row execute function public.set_updated_at();
+
+create table if not exists public.livros (
+  id uuid primary key default gen_random_uuid(),
+  titulo text not null,
+  autor text not null default 'João Nunes Maia',
+  preco numeric(10,2) not null,
+  descricao text,
+  capa_url text,
+  estoque integer not null default 0 check (estoque >= 0),
+  status text not null default 'published' check (status in ('published', 'draft')),
+  created_at timestamptz default now(),
+  updated_at timestamptz default now()
+);
+
+alter table public.livros enable row level security;
+
+drop policy if exists "Publico le livros publicados" on public.livros;
+create policy "Publico le livros publicados"
+on public.livros for select
+using (status = 'published');
+
+drop policy if exists "Autenticados gerenciam livros" on public.livros;
+create policy "Autenticados gerenciam livros"
+on public.livros for all
+to authenticated
+using (true)
+with check (true);
+
+drop trigger if exists livros_set_updated_at on public.livros;
+create trigger livros_set_updated_at before update on public.livros for each row execute function public.set_updated_at();
+
+create table if not exists public.livro_interesses (
+  id uuid primary key default gen_random_uuid(),
+  livro_id uuid references public.livros(id) on delete cascade,
+  livro_titulo text not null,
+  nome text,
+  whatsapp text,
+  email text,
+  observacao text,
+  status text not null default 'novo' check (status in ('novo', 'contatado', 'convertido', 'cancelado')),
+  created_at timestamptz not null default now()
+);
+
+alter table public.livro_interesses enable row level security;
+
+drop policy if exists "Publico registra interesse em livros" on public.livro_interesses;
+create policy "Publico registra interesse em livros"
+on public.livro_interesses for insert
+with check (true);
+
+drop policy if exists "Autenticados leem interesses" on public.livro_interesses;
+create policy "Autenticados leem interesses"
+on public.livro_interesses for select
+to authenticated
+using (true);
+
+insert into storage.buckets (id, name, public)
+values ('livros-capas', 'livros-capas', true)
+on conflict (id) do update set public = true;
