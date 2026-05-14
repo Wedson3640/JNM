@@ -57,14 +57,29 @@ const STATUS_STYLE: Record<string, string> = {
   Transferido:  "bg-yellow-100 text-yellow-700",
 };
 
+const STATUS_OPTIONS = ["Ativo", "Inativo", "Transferido"];
+
 function val(v: string | null | undefined) {
   return v && v.trim() ? v : "—";
+}
+
+function escapeAttr(v: string) {
+  return v.replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;");
+}
+
+function escapeHtml(v: string) {
+  return v.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 }
 
 // ─── Print ficha in new window ────────────────────────────────────────────────
 function openPrint(a: Aluno) {
   const win = window.open("", "_blank", "width=820,height=960");
   if (!win) return;
+
+  const fotoUrl = a.foto_url?.trim();
+  const fotoMarkup = fotoUrl
+    ? `<img class="student-photo" src="${escapeAttr(fotoUrl)}" alt="Foto de ${escapeAttr(a.nome_aluno)}">`
+    : `<div class="student-photo photo-empty">Sem foto</div>`;
 
   win.document.write(`<!DOCTYPE html>
 <html lang="pt-BR">
@@ -76,6 +91,11 @@ function openPrint(a: Aluno) {
     body { font-family: Arial, sans-serif; font-size: 12px; color: #111; padding: 24px; }
     h1 { font-size: 20px; font-weight: bold; }
     .sub { font-size: 12px; color: #555; margin-top: 2px; margin-bottom: 16px; }
+    .photo-box { float: right; width: 118px; margin-left: 20px; margin-bottom: 12px; }
+    .student-photo { display: block; width: 118px; height: 142px; object-fit: cover; object-position: center top;
+      border: 1px solid #d1d5db; border-radius: 8px; background: #f9fafb; }
+    .photo-empty { display: flex; align-items: center; justify-content: center; color: #9ca3af;
+      font-size: 11px; font-weight: bold; text-transform: uppercase; letter-spacing: .06em; }
     .section { margin-top: 14px; border-top: 1px solid #ddd; padding-top: 10px; }
     .section-title { font-size: 10px; font-weight: bold; text-transform: uppercase;
       letter-spacing: .08em; color: #ea580c; margin-bottom: 8px; }
@@ -90,10 +110,11 @@ function openPrint(a: Aluno) {
     .actions { margin-top: 24px; border-top: 1px solid #eee; padding-top: 16px; text-align: right; }
     .btn-print { padding: 8px 24px; background: #ea580c; color: #fff; border: none;
       border-radius: 6px; font-size: 13px; font-weight: bold; cursor: pointer; }
-    @media print { .actions { display: none; } body { padding: 12px; } }
+    @media print { .actions { display: none; } body { padding: 12px; } .student-photo { break-inside: avoid; } }
   </style>
 </head>
 <body>
+  <div class="photo-box">${fotoMarkup}</div>
   <h1>${val(a.nome_aluno)}</h1>
   <p class="sub">
     Matrícula: <strong>${val(a.matricula_nr)}</strong> &nbsp;·&nbsp;
@@ -188,10 +209,81 @@ function openPrint(a: Aluno) {
 }
 
 // ─── Main component ───────────────────────────────────────────────────────────
+function openPrintList(alunos: Aluno[], serie: string, filters: { anoLetivo: string; status: string }) {
+  const win = window.open("", "_blank", "width=900,height=960");
+  if (!win) return;
+
+  const rows = alunos
+    .map((a, index) => `
+      <tr>
+        <td class="num">${index + 1}</td>
+        <td>${escapeHtml(val(a.nome_aluno))}</td>
+        <td>${escapeHtml(val(a.serie))}</td>
+        <td>${escapeHtml(val(a.matricula_nr))}</td>
+        <td>${escapeHtml(val(a.ano_letivo))}</td>
+      </tr>
+    `)
+    .join("");
+
+  const filterText = [
+    `Série: ${serie}`,
+    filters.anoLetivo ? `Ano letivo: ${filters.anoLetivo}` : "Ano letivo: todos",
+    filters.status ? `Status: ${filters.status}` : "Status: todos",
+  ].join(" | ");
+
+  win.document.write(`<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <title>Lista de conferência — ${escapeHtml(serie)}</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: Arial, sans-serif; color: #111; padding: 24px; }
+    h1 { font-size: 20px; margin-bottom: 4px; }
+    .sub { color: #555; font-size: 12px; margin-bottom: 18px; }
+    table { width: 100%; border-collapse: collapse; font-size: 12px; }
+    th, td { border: 1px solid #d1d5db; padding: 7px 8px; text-align: left; }
+    th { background: #f3f4f6; font-size: 10px; text-transform: uppercase; letter-spacing: .06em; }
+    .num { width: 42px; text-align: center; color: #555; }
+    .empty { border: 1px dashed #d1d5db; color: #777; padding: 18px; text-align: center; font-size: 13px; }
+    .actions { margin-top: 24px; border-top: 1px solid #eee; padding-top: 16px; text-align: right; }
+    .btn-print { padding: 8px 24px; background: #ea580c; color: #fff; border: none;
+      border-radius: 6px; font-size: 13px; font-weight: bold; cursor: pointer; }
+    @media print { body { padding: 12px; } .actions { display: none; } thead { display: table-header-group; } tr { break-inside: avoid; } }
+  </style>
+</head>
+<body>
+  <h1>Lista de conferência</h1>
+  <p class="sub">${escapeHtml(filterText)} | Total: ${alunos.length}</p>
+  ${
+    alunos.length
+      ? `<table>
+          <thead>
+            <tr>
+              <th class="num">Nº</th>
+              <th>Nome do aluno</th>
+              <th>Série</th>
+              <th>Matrícula</th>
+              <th>Ano letivo</th>
+            </tr>
+          </thead>
+          <tbody>${rows}</tbody>
+        </table>`
+      : `<div class="empty">Nenhum aluno encontrado para os filtros selecionados.</div>`
+  }
+  <div class="actions">
+    <button class="btn-print" onclick="window.print()">Imprimir lista</button>
+  </div>
+</body>
+</html>`);
+  win.document.close();
+}
+
 export function CrecheManager() {
   const [activeSerie, setActiveSerie] = useState(SERIES[0]);
   const [search, setSearch]           = useState("");
   const [anoLetivo, setAnoLetivo]     = useState("");
+  const [status, setStatus]           = useState("");
   const [alunos, setAlunos]           = useState<Aluno[]>([]);
   const [loading, setLoading]         = useState(false);
   const [error, setError]             = useState<string | null>(null);
@@ -227,7 +319,8 @@ export function CrecheManager() {
   const filtered = alunos.filter((a) => {
     const matchSearch = a.nome_aluno.toLowerCase().includes(search.toLowerCase());
     const matchAno    = anoLetivo ? a.ano_letivo === anoLetivo : true;
-    return matchSearch && matchAno;
+    const matchStatus = status ? a.status === status : true;
+    return matchSearch && matchAno && matchStatus;
   });
 
   // Collect distinct anos for filter dropdown
@@ -246,6 +339,7 @@ export function CrecheManager() {
               setActiveSerie(serie);
               setSearch("");
               setAnoLetivo("");
+              setStatus("");
             }}
             className={`rounded-lg px-4 py-2 text-sm font-semibold transition-colors ${
               activeSerie === serie
@@ -273,6 +367,17 @@ export function CrecheManager() {
             <option value="">Todos os anos</option>
             {anos.map((ano) => (
               <option key={ano} value={ano}>{ano}</option>
+            ))}
+          </select>
+
+          <select
+            value={status}
+            onChange={(e) => setStatus(e.target.value)}
+            className="rounded-lg border border-gray-200 px-3 py-2 text-sm outline-none focus:border-primary"
+          >
+            <option value="">Todos os status</option>
+            {STATUS_OPTIONS.map((option) => (
+              <option key={option} value={option}>{option}</option>
             ))}
           </select>
 
@@ -306,6 +411,16 @@ export function CrecheManager() {
           <span className="ml-auto shrink-0 rounded-full bg-gray-100 px-3 py-1 text-sm font-semibold text-gray-600">
             {loading ? "..." : `${filtered.length} aluno${filtered.length !== 1 ? "s" : ""}`}
           </span>
+
+          <button
+            type="button"
+            onClick={() => openPrintList(filtered, activeSerie, { anoLetivo, status })}
+            disabled={loading}
+            className="inline-flex items-center gap-2 rounded-lg bg-primary px-3 py-2 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-orange-700 disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            <Printer className="h-4 w-4" />
+            Imprimir lista
+          </button>
         </div>
 
         {/* Tabela */}
