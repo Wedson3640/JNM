@@ -2,8 +2,10 @@
 
 import { useEffect, useRef, useState } from "react";
 import { Download, ImageDown, Pencil, Trash2, Upload, X } from "lucide-react";
+import { LectureBanner } from "@/components/banner/LectureBanner";
 import { createSupabaseBrowserClient } from "@/lib/supabase-browser";
 import { SiteConfigPanel } from "@/components/admin/site-config-panel";
+import type { Lecture } from "@/types/lecture";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 type HeroSlide = {
@@ -51,12 +53,35 @@ function bannerParams(s: Omit<HeroSlide, "id">) {
   }).toString();
 }
 
-function bannerUrl(s: Omit<HeroSlide, "id">) {
-  return `/api/banner?${bannerParams(s)}`;
-}
-
 function bannerWebUrl(s: Omit<HeroSlide, "id">) {
   return `/api/banner-web?${bannerParams(s)}`;
+}
+
+function toLecture(slide: Omit<HeroSlide, "id"> & { id?: string }): Lecture {
+  const platform = ["YouTube", "Facebook", "Ambos"].includes(slide.platforms)
+    ? slide.platforms
+    : "YouTube";
+
+  return {
+    id: slide.id ?? "preview",
+    speakerName: slide.speaker_name,
+    speakerImage: slide.image_url ?? "",
+    theme: slide.theme,
+    date: slide.event_date,
+    weekday: slide.event_weekday,
+    time: slide.event_time,
+    platforms: platform as Lecture["platforms"],
+  };
+}
+
+function hasLecturePreview(slide: Omit<HeroSlide, "id">) {
+  return Boolean(
+    slide.speaker_name.trim() ||
+      slide.theme.trim() ||
+      slide.event_date.trim() ||
+      slide.event_weekday.trim() ||
+      slide.event_time.trim()
+  );
 }
 
 // ─── Hero Slides Manager ──────────────────────────────────────────────────────
@@ -69,9 +94,7 @@ function HeroSlidesManager() {
   const [generatingBanner, setGeneratingBanner] = useState(false);
   const [message,          setMessage]          = useState<{ text: string; ok: boolean } | null>(null);
   const [previewWeb,       setPreviewWeb]       = useState<string | null>(null);
-  const [previewInsta,     setPreviewInsta]     = useState<string | null>(null);
-  const [previewTab,       setPreviewTab]       = useState<"web" | "insta">("web");
-  const [previewError,     setPreviewError]     = useState<string | null>(null);
+  const [previewLecture,   setPreviewLecture]   = useState<Lecture | null>(null);
   const [downloading,      setDownloading]      = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
 
@@ -137,36 +160,29 @@ function HeroSlidesManager() {
       return;
     }
 
-    // Gera e sobe ambos os banners em paralelo
+    // Gera e sobe o banner compartilhavel.
     setGeneratingBanner(true);
     setPreviewWeb(null);
-    setPreviewInsta(null);
-    setPreviewError(null);
-    const [, instaUrl] = await Promise.all([
-      Promise.resolve(null),
-      uploadBannerToStorage(payload.id, bannerUrl(form)),
-    ]);
+    const generatedBannerUrl = await uploadBannerToStorage(payload.id, bannerWebUrl(form));
     setGeneratingBanner(false);
 
-    const webPreviewUrl = bannerWebUrl(form);
-    const instaPreviewUrl = instaUrl ?? bannerUrl(form);
+    const webPreviewUrl = generatedBannerUrl ?? bannerWebUrl(form);
     const bannerUpdates: Partial<HeroSlide> = {
       banner_web_url: webPreviewUrl,
-      banner_url: instaPreviewUrl,
+      banner_url: webPreviewUrl,
     };
     payload.banner_web_url = webPreviewUrl;
-    payload.banner_url = instaPreviewUrl;
+    payload.banner_url = webPreviewUrl;
     const { error: bannerUpdateError } = await supabase.from("hero_slides").update(bannerUpdates).eq("id", payload.id);
 
     setPreviewWeb(webPreviewUrl);
-    setPreviewInsta(instaPreviewUrl);
-    setPreviewTab("web");
+    setPreviewLecture(toLecture(payload));
 
     setSlides((prev) => [payload, ...prev.filter((s) => s.id !== payload.id)]);
     setMessage(
       bannerUpdateError
         ? { text: `Palestra salva, mas a URL do banner não foi gravada: ${bannerUpdateError.message}`, ok: false }
-        : { text: "Salvo com sucesso! Banners gerados →", ok: true }
+        : { text: "Salvo com sucesso! Banner gerado →", ok: true }
     );
     setEditingId(null);
     setForm({ ...EMPTY });
@@ -209,14 +225,13 @@ function HeroSlidesManager() {
       status:        slide.status,
     });
     setPreviewWeb(slide.banner_web_url ?? bannerWebUrl(slide));
-    setPreviewInsta(slide.banner_url ?? bannerUrl(slide));
-    setPreviewTab("web");
+    setPreviewLecture(toLecture(slide));
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
   async function downloadBanner() {
-    const src      = previewTab === "web" ? previewWeb : previewInsta;
-    const filename = previewTab === "web" ? "banner-site.png" : "banner-instagram.png";
+    const src      = previewWeb;
+    const filename = "banner-palestra-1536x1024.png";
     if (!src) return;
     setDownloading(true);
     try {
@@ -238,6 +253,10 @@ function HeroSlidesManager() {
     }
   }
 
+  const livePreviewLecture = hasLecturePreview(form)
+    ? toLecture({ ...form, id: editingId ?? "preview" })
+    : previewLecture;
+
   return (
     <>
     {/* ── Overlay de geração de banner ── */}
@@ -253,9 +272,9 @@ function HeroSlidesManager() {
 
           {/* Textos */}
           <div className="text-center">
-            <p className="text-lg font-bold text-gray-900">Gerando banners…</p>
+            <p className="text-lg font-bold text-gray-900">Gerando banner…</p>
             <p className="mt-1 text-sm text-gray-500">
-              Aguarde enquanto os banners Site e Instagram são criados
+              Aguarde enquanto o banner 1536×1024 é criado
             </p>
           </div>
 
@@ -278,7 +297,7 @@ function HeroSlidesManager() {
       </div>
     )}
 
-    <div className="grid gap-6 xl:grid-cols-[1fr_380px]">
+    <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_minmax(520px,0.9fr)]">
 
       {/* ── Coluna esquerda: formulário + lista ── */}
       <div className="space-y-6">
@@ -435,7 +454,7 @@ function HeroSlidesManager() {
               disabled={saving || uploading || generatingBanner}
               className="rounded-xl bg-primary px-6 py-2.5 text-sm font-bold text-white hover:bg-orange-600 disabled:opacity-50"
             >
-              {saving ? "Salvando…" : generatingBanner ? "Gerando banners…" : "Salvar e gerar banner"}
+              {saving ? "Salvando…" : generatingBanner ? "Gerando banner…" : "Salvar e gerar banner"}
             </button>
             {editingId && (
               <button
@@ -502,24 +521,7 @@ function HeroSlidesManager() {
       <div className="xl:sticky xl:top-6 h-fit">
         <div className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
           <h3 className="mb-3 font-bold text-gray-900">Preview do Banner</h3>
-
-          {/* Tabs site / instagram */}
-          <div className="mb-4 flex gap-2">
-            {(["web", "insta"] as const).map((t) => (
-              <button
-                key={t}
-                type="button"
-                onClick={() => setPreviewTab(t)}
-                className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors ${
-                  previewTab === t
-                    ? "bg-primary text-white"
-                    : "border border-gray-200 text-gray-500 hover:text-primary"
-                }`}
-              >
-                {t === "web" ? "Site (1200×500)" : "Instagram (1080×1350)"}
-              </button>
-            ))}
-          </div>
+          <p className="mb-4 text-xs font-semibold text-gray-500">Banner gerado: 1536×1024</p>
 
           {generatingBanner ? (
             /* ── Skeleton de loading ── */
@@ -529,7 +531,7 @@ function HeroSlidesManager() {
                   <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                   <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4l3-3-3-3V4a10 10 0 100 20v-4l-3 3 3 3v-4a8 8 0 01-8-8z" />
                 </svg>
-                Gerando banners…
+                Gerando banner…
               </div>
               {/* Skeleton do banner */}
               <div className="overflow-hidden rounded-xl border border-gray-100 bg-gray-100">
@@ -541,39 +543,28 @@ function HeroSlidesManager() {
                 <div className="h-3 w-1/2 rounded bg-gray-200" />
               </div>
             </div>
-          ) : (previewTab === "web" ? previewWeb : previewInsta) ? (
+          ) : livePreviewLecture ? (
             <>
-              <div className={`relative overflow-hidden rounded-xl border border-gray-100 bg-gray-50 ${
-                previewTab === "web" ? "aspect-[12/5]" : "aspect-[4/5]"
-              }`}>
-                <img
-                  key={previewTab === "web" ? previewWeb! : previewInsta!}
-                  src={previewTab === "web" ? previewWeb! : previewInsta!}
-                  alt="Banner preview"
-                  className="absolute inset-0 h-full w-full object-contain"
-                  onError={() => setPreviewError(`Não foi possível carregar o banner ${previewTab === "web" ? "do site" : "do Instagram"}. Salve novamente ou reinicie o servidor local.`)}
-                />
+              <div className="overflow-hidden rounded-xl border border-gray-100 bg-gray-50 [&>section]:min-h-[360px] [&>section]:shadow-none [&>section]:ring-0 sm:[&>section]:h-[420px] xl:[&>section]:h-[460px]">
+                <LectureBanner lecture={livePreviewLecture} />
               </div>
-              {previewError ? (
-                <p className="mt-2 rounded-lg bg-red-50 px-3 py-2 text-xs font-semibold text-red-600">
-                  {previewError}
-                </p>
+              {previewWeb ? (
+                <button
+                  type="button"
+                  onClick={downloadBanner}
+                  disabled={downloading}
+                  className="mt-4 flex w-full items-center justify-center gap-2 rounded-xl bg-primary px-4 py-3 text-sm font-bold text-white hover:bg-orange-600 disabled:opacity-60"
+                >
+                  <Download className="h-4 w-4" />
+                  {downloading ? "Baixando..." : "Baixar Banner Site"}
+                </button>
               ) : null}
-              <button
-                type="button"
-                onClick={downloadBanner}
-                disabled={downloading}
-                className="mt-4 flex w-full items-center justify-center gap-2 rounded-xl bg-primary px-4 py-3 text-sm font-bold text-white hover:bg-orange-600 disabled:opacity-60"
-              >
-                <Download className="h-4 w-4" />
-                {downloading ? "Baixando…" : `Baixar ${previewTab === "web" ? "Banner Site" : "Banner Instagram"}`}
-              </button>
             </>
           ) : (
             <div className="flex aspect-[4/5] flex-col items-center justify-center gap-3 rounded-xl border-2 border-dashed border-gray-100 bg-gray-50">
               <ImageDown className="h-10 w-10 text-gray-200" />
               <p className="max-w-[180px] text-center text-sm text-gray-400">
-                Preencha o formulário e clique em <strong>Salvar</strong> para gerar os banners
+                Preencha o formulário e clique em <strong>Salvar</strong> para gerar o banner
               </p>
             </div>
           )}

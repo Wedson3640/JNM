@@ -41,9 +41,9 @@ export default async function HomePage() {
         <StudiesPartners studyGroups={siteData.studyGroups} partners={siteData.partners} />
 
         {/* Parceiros institucionais */}
-        <section className="card p-6">
+        <section className="card px-5 py-6 sm:px-6">
           <p className="mb-5 text-[10px] font-bold tracking-[0.22em] text-primary">PARCEIROS</p>
-          <div className="flex items-center justify-between gap-6">
+          <div className="grid grid-cols-2 items-center gap-x-6 gap-y-5 px-2 sm:flex sm:justify-between sm:gap-6 sm:px-0">
             {[
               { src: "/images/parceiros/Fco_clara%20(1).png",             alt: "Fundação Francisco e Clara de Assis" },
               { src: "/images/parceiros/Prefeitura%20de%20teresina.png",  alt: "Prefeitura de Teresina" },
@@ -55,7 +55,7 @@ export default async function HomePage() {
                 key={p.alt}
                 src={p.src}
                 alt={p.alt}
-                className="h-12 max-w-[22%] object-contain"
+                className="mx-auto h-11 max-w-full object-contain sm:h-12 sm:max-w-[22%]"
               />
             ))}
           </div>

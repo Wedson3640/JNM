@@ -6,15 +6,26 @@ const BASE_URL  = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3002";
 const LOGO_JNM  = `${BASE_URL}/images/logo%20JNM%20(1).png`;
 const LOGO_UEPI = `${BASE_URL}/images/UEPI.png`;
 
-function titleCase(s: string) {
-  return s.split(" ").map((w) => (w ? w.charAt(0).toUpperCase() + w.slice(1).toLowerCase() : "")).join(" ");
+function formatTheme(s: string) {
+  const lowercaseWords = new Set(["a", "as", "ao", "aos", "da", "das", "de", "do", "dos", "e", "em", "na", "nas", "no", "nos", "o", "os", "ou", "para", "por"]);
+
+  return s
+    .trim()
+    .replace(/\s+/g, " ")
+    .split(" ")
+    .map((word, index) => {
+      const normalized = word.toLocaleLowerCase("pt-BR");
+      if (index > 0 && lowercaseWords.has(normalized)) return normalized;
+      return normalized.charAt(0).toLocaleUpperCase("pt-BR") + normalized.slice(1);
+    })
+    .join(" ");
 }
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
 
   const speaker   = searchParams.get("speaker")   ?? "";
-  const theme     = titleCase(searchParams.get("theme") ?? "");
+  const theme     = formatTheme(searchParams.get("theme") ?? "");
   const date      = searchParams.get("date")       ?? "";
   const weekday   = searchParams.get("weekday")    ?? "";
   const time      = searchParams.get("time")       ?? "";

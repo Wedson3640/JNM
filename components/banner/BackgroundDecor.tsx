@@ -9,7 +9,7 @@ export function BackgroundDecor() {
         className="absolute inset-0"
         style={{
           background:
-            "radial-gradient(circle at 24% 42%, rgba(196, 154, 255, 0.62) 0 18%, transparent 38%), linear-gradient(112deg, #ead9ff 0%, #fffaf4 43%, #fff3e8 100%)"
+            "radial-gradient(circle at 22% 44%, rgba(196, 181, 253, 0.44) 0 18%, rgba(221, 214, 254, 0.24) 31%, transparent 48%), linear-gradient(112deg, #ead9ff 0%, #fffaf4 43%, #fff3e8 100%)"
         }}
       />
 
@@ -23,14 +23,14 @@ export function BackgroundDecor() {
       </div>
 
       <motion.div
-        animate={{ opacity: [0.5, 0.8, 0.5], scale: [1, 1.015, 1] }}
+        animate={{ opacity: [0.42, 0.66, 0.42], scale: [1, 1.012, 1] }}
         transition={{ duration: 6, repeat: Infinity, ease: "easeInOut" }}
-        className="absolute -left-[112px] top-[70px] h-[360px] w-[360px] rounded-full border-[7px] border-white/90 shadow-[0_0_34px_rgba(255,255,255,0.95)] sm:h-[470px] sm:w-[470px] xl:-left-[74px] xl:top-[76px] xl:h-[500px] xl:w-[500px]"
+        className="absolute -left-[112px] top-[70px] h-[360px] w-[360px] rounded-full border-[7px] border-white/80 shadow-[0_0_34px_rgba(255,255,255,0.75)] sm:h-[470px] sm:w-[470px] xl:-left-[74px] xl:top-[76px] xl:h-[500px] xl:w-[500px]"
         aria-hidden="true"
       />
 
       <div
-        className="absolute -left-[92px] top-[88px] h-[330px] w-[330px] rounded-full border-[3px] border-violet-400/70 sm:h-[438px] sm:w-[438px] xl:-left-[52px] xl:top-[96px] xl:h-[462px] xl:w-[462px]"
+        className="absolute -left-[92px] top-[88px] h-[330px] w-[330px] rounded-full border-[3px] border-violet-400/45 sm:h-[438px] sm:w-[438px] xl:-left-[52px] xl:top-[96px] xl:h-[462px] xl:w-[462px]"
         aria-hidden="true"
       />
 
@@ -47,16 +47,23 @@ export function BackgroundDecor() {
           strokeWidth="5"
         />
         <path
-          d="M770 -90 C705 8 675 94 675 180 C675 294 733 389 846 458"
+          d="M820 -60 C760 30 738 118 758 214 C778 308 842 392 946 466"
           fill="none"
-          stroke="rgba(255,255,255,.38)"
-          strokeWidth="96"
+          stroke="rgba(255,255,255,.42)"
+          strokeWidth="5"
         />
         <path
-          d="M720 120 C790 200 835 300 858 430"
+          d="M774 92 C838 178 872 292 878 440"
           fill="none"
-          stroke="rgba(168,85,247,.08)"
-          strokeWidth="72"
+          stroke="rgba(168,85,247,.075)"
+          strokeWidth="46"
+          strokeLinecap="round"
+        />
+        <path
+          d="M802 222 C858 286 890 360 904 450"
+          fill="none"
+          stroke="rgba(249,115,22,.08)"
+          strokeWidth="24"
           strokeLinecap="round"
         />
       </svg>
