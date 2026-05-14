@@ -11,7 +11,7 @@ const config: Config = {
         text: "#374151"
       },
       fontFamily: {
-        sans: ["Poppins", "Inter", "Segoe UI", "Arial", "sans-serif"]
+        sans: ["Open Sans", "Inter", "Segoe UI", "Arial", "sans-serif"]
       },
       boxShadow: {
         soft: "0 16px 40px rgba(249, 115, 22, 0.12)"

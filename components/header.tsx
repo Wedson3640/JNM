@@ -8,11 +8,11 @@ const logoJnm = "/images/logo%20JNM%20(1).png";
 
 export function Header() {
   return (
-    <header className="sticky top-0 z-40 bg-primary px-1 pt-2">
+    <header className="sticky top-0 z-[100] bg-primary px-1 pt-2">
       <div className="mx-auto max-w-screen-2xl rounded-t-[4rem] bg-orange-50 shadow-sm backdrop-blur">
 
         {/* Linha principal */}
-        <div className="container-page flex min-h-20 items-center gap-4 py-3 sm:min-h-28 sm:py-4">
+        <div className="container-page flex min-h-24 items-center gap-4 py-3 sm:min-h-28 sm:py-4">
 
           {/* Logo */}
           <Link
@@ -20,7 +20,7 @@ export function Header() {
             className="flex min-w-0 items-center gap-3 rounded-full px-2 py-1 hover:bg-orange-100/60"
             aria-label="Página inicial"
           >
-            <div className="relative h-14 w-14 shrink-0 sm:h-20 sm:w-20 lg:h-24 lg:w-24">
+            <div className="relative h-[5.25rem] w-[5.25rem] shrink-0 sm:h-20 sm:w-20 lg:h-24 lg:w-24">
               <Image
                 src={logoJnm}
                 alt="Associação Espírita João Nunes Maia"

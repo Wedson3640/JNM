@@ -36,20 +36,20 @@ export async function GET(request: Request) {
   const showYt = platforms === "YouTube" || platforms === "Ambos";
 
   const [fontBold, fontExtraBold] = await Promise.all([
-    fetch("https://raw.githubusercontent.com/google/fonts/main/ofl/poppins/Poppins-Bold.ttf")
+    fetch("https://raw.githubusercontent.com/google/fonts/main/ofl/opensans/OpenSans%5Bwdth,wght%5D.ttf")
       .then((r) => r.arrayBuffer())
       .catch(() => null),
-    fetch("https://raw.githubusercontent.com/google/fonts/main/ofl/poppins/Poppins-ExtraBold.ttf")
+    fetch("https://raw.githubusercontent.com/google/fonts/main/ofl/opensans/OpenSans%5Bwdth,wght%5D.ttf")
       .then((r) => r.arrayBuffer())
       .catch(() => null),
   ]);
 
   type FontWeight = 700 | 800;
   const fonts: { name: string; data: ArrayBuffer; weight: FontWeight; style: "normal" }[] = [];
-  if (fontBold) fonts.push({ name: "Poppins", data: fontBold, weight: 700, style: "normal" });
-  if (fontExtraBold) fonts.push({ name: "Poppins", data: fontExtraBold, weight: 800, style: "normal" });
+  if (fontBold) fonts.push({ name: "Open Sans", data: fontBold, weight: 700, style: "normal" });
+  if (fontExtraBold) fonts.push({ name: "Open Sans", data: fontExtraBold, weight: 800, style: "normal" });
 
-  const fontFamily = fonts.length ? "Poppins" : "sans-serif";
+  const fontFamily = fonts.length ? "Open Sans" : "sans-serif";
   const speakerSize = speaker.length > 28 ? 54 : 66;
   const themeSize = theme.length > 36 ? 34 : theme.length > 22 ? 39 : 45;
 

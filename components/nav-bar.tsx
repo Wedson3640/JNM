@@ -2,8 +2,9 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useState } from "react";
-import { Menu, X } from "lucide-react";
+import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
+import { LockKeyhole, Menu, X } from "lucide-react";
 
 type NavItem = { label: string; href: string };
 
@@ -40,6 +41,11 @@ export function NavDesktop({ items }: { items: NavItem[] }) {
 export function NavMobileMenu({ items }: { items: NavItem[] }) {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   return (
     <>
@@ -48,14 +54,15 @@ export function NavMobileMenu({ items }: { items: NavItem[] }) {
         type="button"
         aria-label="Abrir menu"
         onClick={() => setOpen(true)}
-        className="grid h-9 w-9 place-items-center rounded-full text-primary hover:bg-orange-100 xl:hidden"
+        className="grid h-14 w-14 place-items-center rounded-full text-primary hover:bg-orange-100 xl:hidden"
       >
-        <Menu className="h-5 w-5" />
+        <Menu className="h-8 w-8" />
       </button>
 
       {/* Drawer overlay */}
-      {open && (
-        <div className="fixed inset-0 z-50 xl:hidden">
+      {open && mounted
+        ? createPortal(
+        <div className="fixed inset-0 z-[9999] xl:hidden">
           {/* Backdrop */}
           <div
             className="absolute inset-0 bg-black/40 backdrop-blur-sm"
@@ -64,7 +71,7 @@ export function NavMobileMenu({ items }: { items: NavItem[] }) {
           />
 
           {/* Painel lateral direito */}
-          <div className="absolute right-0 top-0 flex h-full w-72 flex-col bg-white shadow-2xl">
+          <div className="absolute right-0 top-0 z-[10000] flex h-full w-72 max-w-[86vw] flex-col bg-white shadow-2xl">
             {/* Cabeçalho do drawer */}
             <div className="flex items-center justify-between border-b border-orange-100 px-5 py-4">
               <p className="text-sm font-bold uppercase tracking-widest text-primary">Menu</p>
@@ -98,9 +105,21 @@ export function NavMobileMenu({ items }: { items: NavItem[] }) {
                 );
               })}
             </nav>
+            <div className="border-t border-orange-100 p-4">
+              <Link
+                href="/login"
+                onClick={() => setOpen(false)}
+                className="flex items-center justify-center gap-2 rounded-xl bg-primary px-4 py-3 text-sm font-semibold text-white shadow-sm hover:bg-orange-600"
+              >
+                <LockKeyhole className="h-4 w-4" />
+                Área restrita
+              </Link>
+            </div>
           </div>
-        </div>
-      )}
+        </div>,
+        document.body
+        )
+        : null}
     </>
   );
 }

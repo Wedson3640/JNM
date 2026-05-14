@@ -468,6 +468,57 @@ function HeroSlidesManager() {
           </div>
         </form>
 
+        {/* Preview mobile: antes da lista de palestras */}
+        <div className="xl:hidden">
+          <div className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
+            <h3 className="mb-3 font-bold text-gray-900">Preview do Banner</h3>
+            <p className="mb-4 text-xs font-semibold text-gray-500">Banner gerado: 1536Ã—1024</p>
+
+            {generatingBanner ? (
+              <div className="animate-pulse space-y-3">
+                <div className="flex items-center justify-center gap-2 rounded-xl bg-violet-50 py-3 text-sm font-semibold text-violet-500">
+                  <svg className="h-4 w-4 animate-spin" viewBox="0 0 24 24" fill="none">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4l3-3-3-3V4a10 10 0 100 20v-4l-3 3 3 3v-4a8 8 0 01-8-8z" />
+                  </svg>
+                  Gerando bannerâ€¦
+                </div>
+                <div className="overflow-hidden rounded-xl border border-gray-100 bg-gray-100">
+                  <div className="aspect-[4/5] w-full rounded-xl bg-gradient-to-br from-violet-100 via-gray-100 to-orange-50" />
+                </div>
+                <div className="space-y-2 px-1">
+                  <div className="h-3 w-3/4 rounded bg-gray-200" />
+                  <div className="h-3 w-1/2 rounded bg-gray-200" />
+                </div>
+              </div>
+            ) : livePreviewLecture ? (
+              <>
+                <div className="overflow-hidden rounded-xl border border-gray-100 bg-gray-50 [&>section]:min-h-[360px] [&>section]:shadow-none [&>section]:ring-0 sm:[&>section]:h-[420px]">
+                  <LectureBanner lecture={livePreviewLecture} />
+                </div>
+                {previewWeb ? (
+                  <button
+                    type="button"
+                    onClick={downloadBanner}
+                    disabled={downloading}
+                    className="mt-4 flex w-full items-center justify-center gap-2 rounded-xl bg-primary px-4 py-3 text-sm font-bold text-white hover:bg-orange-600 disabled:opacity-60"
+                  >
+                    <Download className="h-4 w-4" />
+                    {downloading ? "Baixando..." : "Baixar Banner Site"}
+                  </button>
+                ) : null}
+              </>
+            ) : (
+              <div className="flex aspect-[4/5] flex-col items-center justify-center gap-3 rounded-xl border-2 border-dashed border-gray-100 bg-gray-50">
+                <ImageDown className="h-10 w-10 text-gray-200" />
+                <p className="max-w-[180px] text-center text-sm text-gray-400">
+                  Preencha o formulÃ¡rio e clique em <strong>Salvar</strong> para gerar o banner
+                </p>
+              </div>
+            )}
+          </div>
+        </div>
+
         {/* Lista de palestras cadastradas */}
         <div className="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm">
           <div className="border-b border-gray-100 px-6 py-4">
@@ -518,7 +569,7 @@ function HeroSlidesManager() {
       </div>
 
       {/* ── Coluna direita: banner preview ── */}
-      <div className="xl:sticky xl:top-6 h-fit">
+      <div className="hidden h-fit xl:sticky xl:top-6 xl:block">
         <div className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
           <h3 className="mb-3 font-bold text-gray-900">Preview do Banner</h3>
           <p className="mb-4 text-xs font-semibold text-gray-500">Banner gerado: 1536×1024</p>
