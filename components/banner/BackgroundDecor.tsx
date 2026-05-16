@@ -9,7 +9,7 @@ export function BackgroundDecor() {
         className="absolute inset-0"
         style={{
           background:
-            "radial-gradient(circle at 22% 44%, rgba(196, 181, 253, 0.44) 0 18%, rgba(221, 214, 254, 0.24) 31%, transparent 48%), linear-gradient(112deg, #ead9ff 0%, #fffaf4 43%, #fff3e8 100%)"
+            "radial-gradient(circle at 22% 44%, rgba(196, 181, 253, 0.18) 0 18%, rgba(221, 214, 254, 0.12) 31%, transparent 48%), linear-gradient(112deg, #f8f3ff 0%, #fffdf9 43%, #fff8f1 100%)"
         }}
       />
 
@@ -31,49 +31,6 @@ export function BackgroundDecor() {
 
       <div
         className="absolute -left-[92px] top-[88px] h-[330px] w-[330px] rounded-full border-[3px] border-violet-400/45 sm:h-[438px] sm:w-[438px] xl:-left-[52px] xl:top-[96px] xl:h-[462px] xl:w-[462px]"
-        aria-hidden="true"
-      />
-
-      <svg
-        viewBox="0 0 900 560"
-        className="pointer-events-none absolute inset-0 h-full w-full"
-        preserveAspectRatio="none"
-        aria-hidden="true"
-      >
-        <path
-          d="M382 -110 C315 30 292 145 310 265 C329 391 415 482 545 594"
-          fill="none"
-          stroke="rgba(255,255,255,.92)"
-          strokeWidth="5"
-        />
-        <path
-          d="M820 -60 C760 30 738 118 758 214 C778 308 842 392 946 466"
-          fill="none"
-          stroke="rgba(255,255,255,.42)"
-          strokeWidth="5"
-        />
-        <path
-          d="M774 92 C838 178 872 292 878 440"
-          fill="none"
-          stroke="rgba(168,85,247,.075)"
-          strokeWidth="46"
-          strokeLinecap="round"
-        />
-        <path
-          d="M802 222 C858 286 890 360 904 450"
-          fill="none"
-          stroke="rgba(249,115,22,.08)"
-          strokeWidth="24"
-          strokeLinecap="round"
-        />
-      </svg>
-
-      <div
-        className="absolute -bottom-24 left-0 h-56 w-56 rounded-full bg-violet-600/35 blur-3xl"
-        aria-hidden="true"
-      />
-      <div
-        className="absolute bottom-10 right-1/4 h-64 w-64 rounded-full bg-orange-200/45 blur-3xl"
         aria-hidden="true"
       />
     </>
