@@ -10,6 +10,7 @@ const pageTitles: Record<string, string> = {
   "/admin/creche":    "Creche Miranez",
   "/admin/palestras": "Configuração de Palestras",
   "/admin/servicos":  "Serviços Sociais",
+  "/admin/livraria":  "Livraria",
 };
 
 export function Topbar({ onMenuClick }: { onMenuClick?: () => void }) {

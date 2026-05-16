@@ -1,5 +1,5 @@
 import { createSupabaseServerClient, hasSupabaseServerConfig } from "@/lib/supabase-server";
-import { Baby, HandHeart, LayoutDashboard, Mic2 } from "lucide-react";
+import { Baby, BookOpen, HandHeart, LayoutDashboard, Mic2 } from "lucide-react";
 import Link from "next/link";
 
 export const metadata = { title: "Admin — Dashboard" };
@@ -25,6 +25,13 @@ const cards = [
     href: "/admin/servicos",
     icon: HandHeart,
     color: "bg-emerald-50 text-emerald-700",
+  },
+  {
+    label: "Livraria",
+    description: "Livros, estoque e interesses",
+    href: "/admin/livraria",
+    icon: BookOpen,
+    color: "bg-sky-50 text-sky-700",
   },
 ];
 
@@ -64,7 +71,7 @@ export default async function AdminPage() {
       {/* Cards de acesso rápido */}
       <div>
         <p className="mb-3 text-xs font-bold uppercase tracking-widest text-gray-400">Acesso rápido</p>
-        <div className="grid gap-4 sm:grid-cols-3">
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           {cards.map(({ label, description, href, icon: Icon, color }) => (
             <Link
               key={href}

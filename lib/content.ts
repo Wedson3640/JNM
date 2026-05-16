@@ -217,7 +217,7 @@ export const partners = [
 
 export const contact = [
   { label: "WhatsApp", value: "(86) 9483-1739", icon: MessageCircleHeart, href: "https://wa.me/558694831739" },
-  { label: "E-mail",   value: "contato@joaonunesmaia.org.br", icon: Mail },
+  { label: "E-mail",   value: "joaonunesteresina@hotmail.com", icon: Mail },
   { label: "Eventos",  value: "Segunda a sábado: 14h às 20h", icon: CalendarDays },
   { label: "Palestras",value: "Domingo: 08h às 12h", icon: PlayCircle }
 ];

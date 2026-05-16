@@ -6,16 +6,20 @@ import {
   BookOpen,
   Check,
   Copy,
+  FileCheck,
   Heart,
   Headphones,
   Lock,
+  MapPin,
   Minus,
   Package,
+  Phone,
   Plus,
   ShieldCheck,
   ShoppingCart,
   Trash2,
   Users,
+  X,
 } from "lucide-react";
 import { createSupabaseBrowserClient, hasSupabaseBrowserConfig } from "@/lib/supabase-browser";
 
@@ -34,7 +38,17 @@ interface CartItem {
   qty: number;
 }
 
-const PIX_KEY = "jnm@joaonunesmaia.org.br";
+interface CustomerData {
+  nome: string;
+  whatsapp: string;
+  endereco: string;
+  observacao: string;
+}
+
+const PIX_KEY = "01461832000178";
+const PIX_RECEIVER = "Sociedade Espirita Joao Nunes Maia";
+const WHATSAPP_NUMBER = "558694831739";
+const PIX_QR_IMAGE = "/images/pix-qrcode.svg";
 
 const fallbackBooks: Book[] = [
   { id: "estudo-caridade-amor",  titulo: "Estudo, Caridade e Amor ao Próximo", autor: "João Nunes Maia", preco: 39.9, descricao: "Reflexões para fortalecer a fé e a prática do bem.",       capa_url: null, estoque: 8 },
@@ -54,12 +68,69 @@ function fmt(value: number) {
   return value.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 }
 
+function onlyAscii(value: string, maxLength: number) {
+  return value
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^A-Za-z0-9 $%*+\-./:]/g, "")
+    .toUpperCase()
+    .slice(0, maxLength);
+}
+
+function tlv(id: string, value: string) {
+  return `${id}${String(value.length).padStart(2, "0")}${value}`;
+}
+
+function crc16(payload: string) {
+  let crc = 0xffff;
+  for (let i = 0; i < payload.length; i += 1) {
+    crc ^= payload.charCodeAt(i) << 8;
+    for (let bit = 0; bit < 8; bit += 1) {
+      crc = (crc & 0x8000) ? (crc << 1) ^ 0x1021 : crc << 1;
+      crc &= 0xffff;
+    }
+  }
+  return crc.toString(16).toUpperCase().padStart(4, "0");
+}
+
+function buildPixPayload(amount: number) {
+  const merchantAccount = tlv("00", "br.gov.bcb.pix") + tlv("01", PIX_KEY);
+  const additionalData = tlv("05", "JNM");
+  const amountField = amount > 0 ? tlv("54", amount.toFixed(2)) : "";
+  const payloadWithoutCrc = [
+    tlv("00", "01"),
+    tlv("26", merchantAccount),
+    tlv("52", "0000"),
+    tlv("53", "986"),
+    amountField,
+    tlv("58", "BR"),
+    tlv("59", onlyAscii(PIX_RECEIVER, 25)),
+    tlv("60", "TERESINA"),
+    tlv("62", additionalData),
+    "6304",
+  ].join("");
+
+  return `${payloadWithoutCrc}${crc16(payloadWithoutCrc)}`;
+}
+
+function pixQrImage(payload: string) {
+  return `https://api.qrserver.com/v1/create-qr-code/?size=260x260&margin=8&data=${encodeURIComponent(payload)}`;
+}
+
 export default function LivrariaPage() {
   const [books, setBooks]                     = useState<Book[]>(fallbackBooks);
   const [cart, setCart]                       = useState<CartItem[]>([]);
   const [pixCopied, setPixCopied]             = useState(false);
   const [interestMessage, setInterestMessage] = useState<string | null>(null);
   const [cartOpen, setCartOpen]               = useState(false);
+  const [checkoutOpen, setCheckoutOpen]       = useState(false);
+  const [orderMessage, setOrderMessage]       = useState<{ text: string; ok: boolean } | null>(null);
+  const [customer, setCustomer]               = useState<CustomerData>({
+    nome: "",
+    whatsapp: "",
+    endereco: "",
+    observacao: "",
+  });
 
   useEffect(() => {
     async function loadBooks() {
@@ -77,6 +148,8 @@ export default function LivrariaPage() {
 
   const totalItems = cart.reduce((sum, item) => sum + item.qty, 0);
   const subtotal   = cart.reduce((sum, item) => sum + item.book.preco * item.qty, 0);
+  const pixPayload = buildPixPayload(subtotal);
+  const pixQrUrl   = pixQrImage(pixPayload);
 
   function addToCart(book: Book) {
     if (book.estoque <= 0) { registerInterest(book); return; }
@@ -117,18 +190,65 @@ export default function LivrariaPage() {
   }
 
   function copyPix() {
-    navigator.clipboard.writeText(PIX_KEY);
+    navigator.clipboard.writeText(pixPayload);
     setPixCopied(true);
     setTimeout(() => setPixCopied(false), 2000);
   }
 
-  function finishOrder() {
+  function openCheckout() {
+    if (cart.length === 0) return;
+    setOrderMessage(null);
+    setCheckoutOpen(true);
+  }
+
+  async function finishOrder() {
+    if (!customer.nome.trim() || !customer.whatsapp.trim()) {
+      setOrderMessage({ text: "Informe nome e WhatsApp para finalizar.", ok: false });
+      return;
+    }
+
     const lines = [
       "*Pedido - Livraria JNM*", "",
+      `Cliente: ${customer.nome.trim()}`,
+      `WhatsApp: ${customer.whatsapp.trim()}`,
+      customer.endereco.trim() ? `Endereco: ${customer.endereco.trim()}` : null,
+      customer.observacao.trim() ? `Observacao: ${customer.observacao.trim()}` : null,
+      "",
       ...cart.map((i) => `${i.qty}x ${i.book.titulo} - ${fmt(i.book.preco * i.qty)}`),
-      "", `Total: ${fmt(subtotal)}`, `PIX: ${PIX_KEY}`,
-    ];
-    window.open(`https://wa.me/558699999999?text=${encodeURIComponent(lines.join("\n"))}`, "_blank");
+      "", `Total: ${fmt(subtotal)}`, `PIX copia e cola: ${pixPayload}`, `Favorecido: ${PIX_RECEIVER}`,
+      "",
+      "Comprovante: anexar nesta conversa para conferencia.",
+    ].filter(Boolean) as string[];
+
+    if (hasSupabaseBrowserConfig()) {
+      const supabase = createSupabaseBrowserClient();
+      const { error } = await supabase.from("livro_pedidos").insert({
+        nome_cliente: customer.nome.trim(),
+        whatsapp: customer.whatsapp.trim(),
+        endereco: customer.endereco.trim() || null,
+        observacao: customer.observacao.trim() || null,
+        itens: cart.map((item) => ({
+          livro_id: item.book.id,
+          titulo: item.book.titulo,
+          quantidade: item.qty,
+          preco_unitario: item.book.preco,
+          total: item.book.preco * item.qty,
+        })),
+        subtotal,
+        total: subtotal,
+        pix_key: pixPayload,
+        pix_receiver: PIX_RECEIVER,
+        status: "em_conferencia",
+        comprovante_status: "aguardando_conferencia",
+      });
+
+      setOrderMessage(error
+        ? { text: "Nao foi possivel gravar o pedido, mas o WhatsApp sera aberto.", ok: false }
+        : { text: "Pedido gravado para conferencia do comprovante.", ok: true }
+      );
+    }
+
+    window.open(`https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(lines.join("\n"))}`, "_blank");
   }
 
   const featuredBook = books[0] ?? fallbackBooks[0];
@@ -311,7 +431,7 @@ export default function LivrariaPage() {
 
             {cart.length > 0 && (
               <div className="border-t border-orange-100 px-4 py-4 space-y-3">
-                <PixPanel compact copied={pixCopied} onCopy={copyPix} onFinish={finishOrder} />
+                <PixPanel compact copied={pixCopied} onCopy={copyPix} onFinish={openCheckout} pixPayload={pixPayload} qrImage={pixQrUrl} subtotal={subtotal} />
               </div>
             )}
           </aside>
@@ -325,11 +445,26 @@ export default function LivrariaPage() {
             <div>{/* conteúdo já renderizado acima */}</div>
             <aside className="space-y-5 xl:sticky xl:top-28 xl:self-start">
               <CartPanel cart={cart} subtotal={subtotal} onQty={changeQty} />
-              <PixPanel copied={pixCopied} onCopy={copyPix} onFinish={finishOrder} />
+              <PixPanel copied={pixCopied} onCopy={copyPix} onFinish={openCheckout} pixPayload={pixPayload} qrImage={pixQrUrl} subtotal={subtotal} />
             </aside>
           </div>
         </div>
       </div>
+      {checkoutOpen && (
+        <CheckoutModal
+          cart={cart}
+          subtotal={subtotal}
+          customer={customer}
+          copied={pixCopied}
+          message={orderMessage}
+          onCopy={copyPix}
+          onClose={() => setCheckoutOpen(false)}
+          onCustomerChange={setCustomer}
+          onFinish={finishOrder}
+          pixPayload={pixPayload}
+          qrImage={pixQrUrl}
+        />
+      )}
     </main>
   );
 }
@@ -435,7 +570,23 @@ function CartPanel({ cart, subtotal, onQty }: { cart: CartItem[]; subtotal: numb
   );
 }
 
-function PixPanel({ copied, onCopy, onFinish, compact = false }: { copied: boolean; onCopy: () => void; onFinish: () => void; compact?: boolean }) {
+function PixPanel({
+  copied,
+  onCopy,
+  onFinish,
+  pixPayload,
+  qrImage,
+  subtotal,
+  compact = false
+}: {
+  copied: boolean;
+  onCopy: () => void;
+  onFinish: () => void;
+  pixPayload: string;
+  qrImage: string;
+  subtotal: number;
+  compact?: boolean;
+}) {
   return (
     <section className={`rounded-2xl border border-orange-100 bg-white/75 shadow-sm ${compact ? "p-4" : "p-5 sm:p-6"}`}>
       {!compact && (
@@ -446,17 +597,25 @@ function PixPanel({ copied, onCopy, onFinish, compact = false }: { copied: boole
       )}
 
       <div className={`${compact ? "" : "mt-4"} grid gap-4 sm:grid-cols-[100px_1fr]`}>
-        <div className="hidden h-28 w-28 place-items-center rounded-xl border border-orange-100 bg-white p-2 sm:grid">
-          <div className="h-24 w-24 bg-[repeating-linear-gradient(45deg,#111_0_3px,#fff_3px_6px)] opacity-70" />
+        <div className="grid h-28 w-28 place-items-center rounded-xl border border-orange-100 bg-white p-2">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={qrImage}
+            alt={`QR Code Pix no valor de ${fmt(subtotal)}`}
+            className="h-24 w-24 object-contain"
+            onError={(event) => { event.currentTarget.src = PIX_QR_IMAGE; }}
+          />
         </div>
         <div>
           <p className="text-xs text-gray-500 sm:text-sm">Chave PIX (Copia e Cola)</p>
+          <p className="mt-1 text-sm font-semibold text-gray-800">{PIX_RECEIVER}</p>
+          <p className="mt-1 text-xs font-bold text-primary">Valor: {fmt(subtotal)}</p>
           <button
             onClick={onCopy}
-            className="mt-2 flex w-full items-center justify-between rounded-xl border border-orange-100 bg-white px-3 py-2.5 text-xs font-semibold sm:mt-3 sm:px-4 sm:text-sm"
+            className="mt-2 flex w-full items-start justify-between gap-2 rounded-xl border border-orange-100 bg-white px-3 py-2.5 text-left text-xs font-semibold sm:mt-3 sm:px-4"
           >
-            <span className="truncate">{PIX_KEY}</span>
-            {copied ? <Check className="ml-2 h-4 w-4 shrink-0 text-emerald-600" /> : <Copy className="ml-2 h-4 w-4 shrink-0 text-gray-400" />}
+            <span className="max-h-16 min-w-0 flex-1 overflow-y-auto break-all leading-relaxed">{pixPayload}</span>
+            {copied ? <Check className="mt-1 h-4 w-4 shrink-0 text-emerald-600" /> : <Copy className="mt-1 h-4 w-4 shrink-0 text-gray-400" />}
           </button>
         </div>
       </div>
@@ -473,9 +632,175 @@ function PixPanel({ copied, onCopy, onFinish, compact = false }: { copied: boole
         className="mt-4 flex w-full items-center justify-center gap-2 rounded-xl bg-primary px-5 py-3 text-sm font-bold text-white shadow-md hover:bg-orange-600 sm:py-4 sm:text-base"
       >
         <Lock className="h-4 w-4 sm:h-5 sm:w-5" />
-        Finalizar compra via WhatsApp
+        Finalizar compra
       </button>
     </section>
+  );
+}
+
+function CheckoutModal({
+  cart,
+  subtotal,
+  customer,
+  copied,
+  message,
+  onCopy,
+  onClose,
+  onCustomerChange,
+  onFinish,
+  pixPayload,
+  qrImage,
+}: {
+  cart: CartItem[];
+  subtotal: number;
+  customer: CustomerData;
+  copied: boolean;
+  message: { text: string; ok: boolean } | null;
+  onCopy: () => void;
+  onClose: () => void;
+  onCustomerChange: (data: CustomerData) => void;
+  onFinish: () => void;
+  pixPayload: string;
+  qrImage: string;
+}) {
+  function update(field: keyof CustomerData, value: string) {
+    onCustomerChange({ ...customer, [field]: value });
+  }
+
+  return (
+    <div className="fixed inset-0 z-[70] flex items-end bg-black/55 p-0 sm:items-center sm:justify-center sm:p-6">
+      <div className="max-h-[94vh] w-full overflow-y-auto rounded-t-3xl bg-[#fffaf5] shadow-2xl sm:max-w-3xl sm:rounded-3xl">
+        <div className="sticky top-0 z-10 flex items-center justify-between border-b border-orange-100 bg-[#fffaf5]/95 px-5 py-4 backdrop-blur sm:px-6">
+          <div>
+            <p className="text-xs font-bold uppercase tracking-widest text-primary">Pagamento via Pix</p>
+            <h2 className="text-lg font-extrabold text-gray-950 sm:text-2xl">Finalize seu pedido</h2>
+          </div>
+          <button
+            type="button"
+            aria-label="Fechar"
+            onClick={onClose}
+            className="grid h-10 w-10 place-items-center rounded-full border border-orange-100 bg-white text-gray-500 hover:text-primary"
+          >
+            <X className="h-5 w-5" />
+          </button>
+        </div>
+
+        <div className="grid gap-5 p-5 sm:grid-cols-[280px_1fr] sm:p-6">
+          <section className="rounded-2xl border border-orange-100 bg-white p-4 shadow-sm">
+            <div className="mx-auto grid h-56 w-56 place-items-center rounded-2xl border border-orange-100 bg-white p-3">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={qrImage}
+                alt={`QR Code Pix no valor de ${fmt(subtotal)}`}
+                className="h-full w-full object-contain"
+                onError={(event) => { event.currentTarget.src = PIX_QR_IMAGE; }}
+              />
+            </div>
+            <p className="mt-4 text-xs text-gray-500">Chave Pix Copia e Cola</p>
+            <p className="mt-1 text-sm font-semibold text-gray-800">{PIX_RECEIVER}</p>
+            <p className="mt-1 text-sm font-bold text-primary">Valor: {fmt(subtotal)}</p>
+            <button
+              type="button"
+              onClick={onCopy}
+              className="mt-3 flex w-full items-start justify-between gap-2 rounded-xl border border-orange-100 bg-[#fffaf5] px-4 py-3 text-left text-xs font-bold sm:text-sm"
+            >
+              <span className="max-h-20 min-w-0 flex-1 overflow-y-auto break-all leading-relaxed">{pixPayload}</span>
+              {copied ? <Check className="mt-1 h-4 w-4 shrink-0 text-emerald-600" /> : <Copy className="mt-1 h-4 w-4 shrink-0 text-gray-400" />}
+            </button>
+            <div className="mt-4 rounded-xl bg-orange-50 p-3 text-xs text-gray-600">
+              Depois do pagamento, toque no botao do WhatsApp e anexe o comprovante na conversa.
+            </div>
+          </section>
+
+          <section className="space-y-4">
+            <div className="rounded-2xl border border-orange-100 bg-white p-4 shadow-sm">
+              <h3 className="text-sm font-extrabold text-gray-900">Dados do cliente</h3>
+              <div className="mt-4 grid gap-3">
+                <label className="block text-xs font-bold text-gray-600" htmlFor="checkout-nome">
+                  Nome
+                  <span className="mt-1 flex items-center gap-2 rounded-xl border border-orange-100 bg-[#fffaf5] px-3">
+                    <Users className="h-4 w-4 text-primary" />
+                    <input
+                      id="checkout-nome"
+                      value={customer.nome}
+                      onChange={(event) => update("nome", event.target.value)}
+                      className="w-full bg-transparent py-3 text-sm text-gray-950 outline-none"
+                      required
+                    />
+                  </span>
+                </label>
+                <label className="block text-xs font-bold text-gray-600" htmlFor="checkout-whatsapp">
+                  WhatsApp
+                  <span className="mt-1 flex items-center gap-2 rounded-xl border border-orange-100 bg-[#fffaf5] px-3">
+                    <Phone className="h-4 w-4 text-primary" />
+                    <input
+                      id="checkout-whatsapp"
+                      value={customer.whatsapp}
+                      onChange={(event) => update("whatsapp", event.target.value)}
+                      className="w-full bg-transparent py-3 text-sm text-gray-950 outline-none"
+                      placeholder="(86) 99999-9999"
+                      required
+                    />
+                  </span>
+                </label>
+                <label className="block text-xs font-bold text-gray-600" htmlFor="checkout-endereco">
+                  Endereco
+                  <span className="mt-1 flex items-center gap-2 rounded-xl border border-orange-100 bg-[#fffaf5] px-3">
+                    <MapPin className="h-4 w-4 text-primary" />
+                    <input
+                      id="checkout-endereco"
+                      value={customer.endereco}
+                      onChange={(event) => update("endereco", event.target.value)}
+                      className="w-full bg-transparent py-3 text-sm text-gray-950 outline-none"
+                    />
+                  </span>
+                </label>
+                <label className="block text-xs font-bold text-gray-600" htmlFor="checkout-observacao">
+                  Observacao
+                  <textarea
+                    id="checkout-observacao"
+                    value={customer.observacao}
+                    onChange={(event) => update("observacao", event.target.value)}
+                    className="mt-1 min-h-20 w-full rounded-xl border border-orange-100 bg-[#fffaf5] px-3 py-3 text-sm text-gray-950 outline-none"
+                  />
+                </label>
+              </div>
+            </div>
+
+            <div className="rounded-2xl border border-orange-100 bg-white p-4 shadow-sm">
+              <h3 className="text-sm font-extrabold text-gray-900">Resumo</h3>
+              <div className="mt-3 space-y-2 text-sm">
+                {cart.map((item) => (
+                  <div key={item.book.id} className="flex justify-between gap-3">
+                    <span className="text-gray-600">{item.qty}x {item.book.titulo}</span>
+                    <strong>{fmt(item.book.preco * item.qty)}</strong>
+                  </div>
+                ))}
+                <div className="flex justify-between border-t border-orange-100 pt-3 text-base font-extrabold">
+                  <span>Total</span>
+                  <span className="text-primary">{fmt(subtotal)}</span>
+                </div>
+              </div>
+            </div>
+
+            {message && (
+              <p className={`rounded-xl px-4 py-3 text-sm font-semibold ${message.ok ? "bg-emerald-50 text-emerald-700" : "bg-orange-50 text-primary"}`}>
+                {message.text}
+              </p>
+            )}
+
+            <button
+              type="button"
+              onClick={onFinish}
+              className="flex w-full items-center justify-center gap-2 rounded-xl bg-primary px-5 py-4 text-sm font-extrabold text-white shadow-md hover:bg-orange-600"
+            >
+              <FileCheck className="h-5 w-5" />
+              Enviar comprovante pelo WhatsApp
+            </button>
+          </section>
+        </div>
+      </div>
+    </div>
   );
 }
 

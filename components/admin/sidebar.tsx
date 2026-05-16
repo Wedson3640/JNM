@@ -1,19 +1,22 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Baby, BookOpen, HandHeart, LayoutDashboard, Mic2, X } from "lucide-react";
+import { createSupabaseBrowserClient } from "@/lib/supabase-browser";
+import { getAdminProfile, getAllowedAdminNavItems, normalizeAdminProfile, type AdminProfile } from "@/lib/admin-access";
 
 const logoJnm = "/images/logo%20JNM%20(1).png";
 
-const navItems = [
-  { label: "Dashboard", href: "/admin", icon: LayoutDashboard, external: false },
-  { label: "Creche Miranez", href: "/admin/creche", icon: Baby, external: false },
-  { label: "Config. Palestra", href: "/admin/palestras", icon: Mic2, external: false },
-  { label: "Serv. Sociais", href: "/admin/servicos", icon: HandHeart, external: false },
-  { label: "Livraria", href: "/admin/livraria", icon: BookOpen, external: false },
-];
+const iconsByHref = {
+  "/admin": LayoutDashboard,
+  "/admin/creche": Baby,
+  "/admin/palestras": Mic2,
+  "/admin/servicos": HandHeart,
+  "/admin/livraria": BookOpen,
+};
 
 function SidebarContent({
   onNavigate,
@@ -23,6 +26,25 @@ function SidebarContent({
   showClose?: boolean;
 }) {
   const pathname = usePathname();
+  const [profile, setProfile] = useState<AdminProfile>("admin");
+
+  useEffect(() => {
+    const supabase = createSupabaseBrowserClient();
+    supabase.auth.getUser().then(async ({ data }) => {
+      const user = data.user;
+      if (!user) return;
+
+      const { data: userProfile } = await supabase
+        .from("user_profiles")
+        .select("profile")
+        .eq("user_id", user.id)
+        .maybeSingle();
+
+      setProfile(userProfile?.profile ? normalizeAdminProfile(userProfile.profile) : getAdminProfile(user.user_metadata));
+    });
+  }, []);
+
+  const navItems = getAllowedAdminNavItems(profile);
 
   return (
     <>
@@ -47,14 +69,13 @@ function SidebarContent({
       </div>
 
       <nav className="flex-1 space-y-1 px-3 py-4">
-        {navItems.map(({ label, href, icon: Icon, external }) => {
+        {navItems.map(({ label, href }) => {
+          const Icon = iconsByHref[href as keyof typeof iconsByHref];
           const active = pathname === href;
           return (
             <Link
               key={href}
               href={href}
-              target={external ? "_blank" : undefined}
-              rel={external ? "noopener noreferrer" : undefined}
               onClick={onNavigate}
               className={`flex items-center gap-3 rounded-lg px-4 py-3 text-sm font-semibold transition-colors ${
                 active

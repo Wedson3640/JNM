@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Eye, EyeOff, KeyRound, Loader2, Lock, Mail, User } from "lucide-react";
 import { registerUser } from "@/app/cad_users/actions";
+import { adminProfileOptions, type AdminProfile } from "@/lib/admin-access";
 
 function PasswordInput({
   id,
@@ -49,6 +50,7 @@ export function RegisterForm() {
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
   const [code, setCode] = useState("");
+  const [profile, setProfile] = useState<AdminProfile>("creche");
   const [message, setMessage] = useState<{ text: string; ok: boolean } | null>(null);
   const [loading, setLoading] = useState(false);
 
@@ -68,7 +70,7 @@ export function RegisterForm() {
 
     setLoading(true);
     const displayName = firstName.trim();
-    const result = await registerUser(email, password, code, displayName);
+    const result = await registerUser(email, password, code, displayName, profile);
     setLoading(false);
 
     if (result.error) {
@@ -82,6 +84,7 @@ export function RegisterForm() {
     setPassword("");
     setConfirm("");
     setCode("");
+    setProfile("creche");
   }
 
   return (
@@ -145,6 +148,25 @@ export function RegisterForm() {
         autoComplete="new-password"
         icon={Lock}
       />
+
+      <label className="mt-4 block text-sm font-semibold text-gray-950" htmlFor="reg-profile">
+        Perfil de acesso
+      </label>
+      <div className="mt-2 rounded-2xl border border-orange-100 bg-white px-4">
+        <select
+          id="reg-profile"
+          required
+          value={profile}
+          onChange={(e) => setProfile(e.target.value as AdminProfile)}
+          className="w-full bg-transparent py-3 outline-none"
+        >
+          {adminProfileOptions.map((option) => (
+            <option key={option.value} value={option.value}>
+              {option.label}
+            </option>
+          ))}
+        </select>
+      </div>
 
       <label className="mt-4 block text-sm font-semibold text-gray-950" htmlFor="reg-code">
         Código de acesso

@@ -1,5 +1,18 @@
 create extension if not exists "pgcrypto";
 
+DO $$
+BEGIN
+  CREATE TYPE public.admin_profile AS ENUM (
+    'admin',
+    'creche',
+    'palestras',
+    'livraria',
+    'servicos'
+  );
+EXCEPTION
+  WHEN duplicate_object THEN NULL;
+END $$;
+
 create table if not exists public.news (
   id uuid primary key default gen_random_uuid(),
   title text not null check (char_length(title) between 4 and 120),
@@ -158,6 +171,13 @@ create table if not exists public.user_access_logs (
   created_at timestamptz not null default now()
 );
 
+create table if not exists public.user_profiles (
+  user_id uuid primary key references auth.users(id) on delete cascade,
+  profile public.admin_profile not null default 'admin',
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
 alter table public.hero_slides enable row level security;
 alter table public.fraternal_services enable row level security;
 alter table public.weekly_schedule enable row level security;
@@ -166,6 +186,17 @@ alter table public.study_groups enable row level security;
 alter table public.partners enable row level security;
 alter table public.house_areas enable row level security;
 alter table public.user_access_logs enable row level security;
+alter table public.user_profiles enable row level security;
+
+create or replace function public.current_admin_profile()
+returns public.admin_profile
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select profile from public.user_profiles where user_id = auth.uid();
+$$;
 
 create policy "Anyone can read published hero slides"
 on public.hero_slides for select
@@ -231,6 +262,22 @@ create policy "Authenticated users can read access logs"
 on public.user_access_logs for select to authenticated
 using (true);
 
+drop policy if exists "Users can read own profile" on public.user_profiles;
+create policy "Users can read own profile"
+on public.user_profiles for select
+to authenticated
+using (
+  user_id = auth.uid()
+  or public.current_admin_profile() = 'admin'
+);
+
+drop policy if exists "Admins can manage user profiles" on public.user_profiles;
+create policy "Admins can manage user profiles"
+on public.user_profiles for all
+to authenticated
+using (public.current_admin_profile() = 'admin')
+with check (public.current_admin_profile() = 'admin');
+
 drop trigger if exists hero_slides_set_updated_at on public.hero_slides;
 create trigger hero_slides_set_updated_at before update on public.hero_slides for each row execute function public.set_updated_at();
 
@@ -251,6 +298,9 @@ create trigger partners_set_updated_at before update on public.partners for each
 
 drop trigger if exists house_areas_set_updated_at on public.house_areas;
 create trigger house_areas_set_updated_at before update on public.house_areas for each row execute function public.set_updated_at();
+
+drop trigger if exists user_profiles_set_updated_at on public.user_profiles;
+create trigger user_profiles_set_updated_at before update on public.user_profiles for each row execute function public.set_updated_at();
 
 create table if not exists public.livros (
   id uuid primary key default gen_random_uuid(),
@@ -294,7 +344,27 @@ create table if not exists public.livro_interesses (
   created_at timestamptz not null default now()
 );
 
+create table if not exists public.livro_pedidos (
+  id uuid primary key default gen_random_uuid(),
+  nome_cliente text not null,
+  whatsapp text not null,
+  endereco text,
+  observacao text,
+  itens jsonb not null default '[]'::jsonb,
+  subtotal numeric(10,2) not null default 0,
+  total numeric(10,2) not null default 0,
+  pix_key text not null,
+  pix_receiver text not null,
+  status text not null default 'aguardando_comprovante'
+    check (status in ('aguardando_comprovante', 'em_conferencia', 'confirmado', 'cancelado')),
+  comprovante_status text not null default 'aguardando_conferencia'
+    check (comprovante_status in ('aguardando_envio', 'aguardando_conferencia', 'conferido', 'recusado')),
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
 alter table public.livro_interesses enable row level security;
+alter table public.livro_pedidos enable row level security;
 
 drop policy if exists "Publico registra interesse em livros" on public.livro_interesses;
 create policy "Publico registra interesse em livros"
@@ -306,6 +376,27 @@ create policy "Autenticados leem interesses"
 on public.livro_interesses for select
 to authenticated
 using (true);
+
+drop policy if exists "Publico registra pedidos da livraria" on public.livro_pedidos;
+create policy "Publico registra pedidos da livraria"
+on public.livro_pedidos for insert
+with check (true);
+
+drop policy if exists "Autenticados leem pedidos da livraria" on public.livro_pedidos;
+create policy "Autenticados leem pedidos da livraria"
+on public.livro_pedidos for select
+to authenticated
+using (true);
+
+drop policy if exists "Autenticados atualizam pedidos da livraria" on public.livro_pedidos;
+create policy "Autenticados atualizam pedidos da livraria"
+on public.livro_pedidos for update
+to authenticated
+using (true)
+with check (true);
+
+drop trigger if exists livro_pedidos_set_updated_at on public.livro_pedidos;
+create trigger livro_pedidos_set_updated_at before update on public.livro_pedidos for each row execute function public.set_updated_at();
 
 insert into storage.buckets (id, name, public)
 values ('livros-capas', 'livros-capas', true)

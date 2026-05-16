@@ -1,5 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { createServerClient, type CookieOptions } from "@supabase/ssr";
+import { canAccessAdminPath, getAdminProfile, getDefaultAdminPath, normalizeAdminProfile } from "@/lib/admin-access";
 
 export async function middleware(request: NextRequest) {
   const response = NextResponse.next({ request });
@@ -34,6 +35,20 @@ export async function middleware(request: NextRequest) {
 
   if (!user) {
     return NextResponse.redirect(new URL("/login", request.url));
+  }
+
+  const { data: userProfile } = await supabase
+    .from("user_profiles")
+    .select("profile")
+    .eq("user_id", user.id)
+    .maybeSingle();
+
+  const profile = userProfile?.profile
+    ? normalizeAdminProfile(userProfile.profile)
+    : getAdminProfile(user.user_metadata);
+
+  if (!canAccessAdminPath(profile, request.nextUrl.pathname)) {
+    return NextResponse.redirect(new URL(getDefaultAdminPath(profile), request.url));
   }
 
   return response;

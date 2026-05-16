@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 220 220" role="img" aria-label="QR Code Pix">
+  <rect width="220" height="220" fill="#fff"/>
+  <rect x="10" y="10" width="56" height="56" fill="#111827"/>
+  <rect x="18" y="18" width="40" height="40" fill="#fff"/>
+  <rect x="26" y="26" width="24" height="24" fill="#111827"/>
+  <rect x="154" y="10" width="56" height="56" fill="#111827"/>
+  <rect x="162" y="18" width="40" height="40" fill="#fff"/>
+  <rect x="170" y="26" width="24" height="24" fill="#111827"/>
+  <rect x="10" y="154" width="56" height="56" fill="#111827"/>
+  <rect x="18" y="162" width="40" height="40" fill="#fff"/>
+  <rect x="26" y="170" width="24" height="24" fill="#111827"/>
+  <path fill="#111827" d="M82 10h8v8h-8zM98 10h16v8H98zM130 10h8v8h-8zM82 26h24v8H82zM114 26h8v8h-8zM138 26h8v8h-8zM82 42h8v8h-8zM98 42h8v8h-8zM122 42h24v8h-24zM82 58h32v8H82zM130 58h16v8h-16zM10 82h8v8h-8zM26 82h40v8H26zM82 82h8v8h-8zM98 82h16v8H98zM122 82h8v8h-8zM146 82h16v8h-16zM178 82h32v8h-32zM18 98h16v8H18zM50 98h8v8h-8zM74 98h24v8H74zM114 98h40v8h-40zM170 98h8v8h-8zM194 98h16v8h-16zM10 114h24v8H10zM42 114h24v8H42zM82 114h8v8h-8zM106 114h16v8h-16zM138 114h8v8h-8zM154 114h40v8h-40zM202 114h8v8h-8zM26 130h8v8h-8zM50 130h48v8H50zM114 130h8v8h-8zM130 130h24v8h-24zM170 130h8v8h-8zM194 130h16v8h-16zM82 146h32v8H82zM122 146h8v8h-8zM146 146h32v8h-32zM194 146h8v8h-8zM82 162h8v8h-8zM106 162h24v8h-24zM138 162h8v8h-8zM154 162h16v8h-16zM178 162h32v8h-32zM82 178h16v8H82zM114 178h8v8h-8zM130 178h32v8h-32zM170 178h8v8h-8zM194 178h8v8h-8zM82 194h8v8h-8zM98 194h24v8H98zM138 194h16v8h-16zM162 194h48v8h-48z"/>
+</svg>
