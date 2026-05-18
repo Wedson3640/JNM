@@ -25,7 +25,7 @@ export async function registerUser(
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
-  const placeholders = ["COLE_AQUI", "sua-chave", "seu-codigo"];
+  const placeholders = ["COLE_AQUI", "sua-chave"];
   if (!supabaseUrl || !serviceKey || placeholders.some((p) => serviceKey.includes(p))) {
     return { error: "Chave do servidor nao configurada. Preencha SUPABASE_SERVICE_ROLE_KEY no .env.local." };
   }

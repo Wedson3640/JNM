@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import Image from "next/image";
 import {
   BookOpen,
   ImagePlus,
@@ -222,7 +221,8 @@ export default function LivrariaAdminPage() {
                 {/* Capa */}
                 <div className="relative h-44 w-full bg-gradient-to-br from-violet-100 to-purple-50">
                   {livro.capa_url ? (
-                    <Image src={livro.capa_url} alt={livro.titulo} fill className="object-cover" sizes="320px" />
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={livro.capa_url} alt={livro.titulo} className="h-full w-full object-cover" />
                   ) : (
                     <div className="flex h-full items-center justify-center">
                       <BookOpen className="h-12 w-12 text-violet-200" />
