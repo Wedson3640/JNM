@@ -25,7 +25,7 @@ export const navigation = [
 export const navLinks = [
   { label: "Início",         href: "#inicio" },
   { label: "Livraria",       href: "/livraria" },
-  { label: "Creche Miranez", href: "#creche-miranez" },
+  { label: "Creche Miranez", href: "/creche-miranez" },
   { label: "Programação",    href: "/programacao" },
   { label: "Notícias",       href: "#noticias" },
   { label: "Eventos",        href: "#eventos" },

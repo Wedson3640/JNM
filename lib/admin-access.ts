@@ -17,6 +17,7 @@ export const adminProfileOptions: { value: AdminProfile; label: string }[] = [
 export const adminNavAccess: AdminNavItem[] = [
   { label: "Dashboard", href: "/admin", profile: "admin" },
   { label: "Creche Miranez", href: "/admin/creche", profile: "creche" },
+  { label: "Config. Creche Miranez", href: "/admin/creche/config", profile: "creche" },
   { label: "Config. Palestra", href: "/admin/palestras", profile: "palestras" },
   { label: "Serv. Sociais", href: "/admin/servicos", profile: "servicos" },
   { label: "Livraria", href: "/admin/livraria", profile: "livraria" },

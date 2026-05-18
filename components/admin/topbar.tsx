@@ -8,6 +8,7 @@ import { createSupabaseBrowserClient } from "@/lib/supabase-browser";
 const pageTitles: Record<string, string> = {
   "/admin":           "Dashboard",
   "/admin/creche":    "Creche Miranez",
+  "/admin/creche/config": "Config. Creche Miranez",
   "/admin/palestras": "Configuração de Palestras",
   "/admin/servicos":  "Serviços Sociais",
   "/admin/livraria":  "Livraria",

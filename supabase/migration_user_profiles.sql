@@ -66,3 +66,6 @@ CREATE TRIGGER user_profiles_set_updated_at
 BEFORE UPDATE ON public.user_profiles
 FOR EACH ROW
 EXECUTE FUNCTION public.set_updated_at();
+
+-- Atualiza o cache do PostgREST usado pela API REST do Supabase.
+NOTIFY pgrst, 'reload schema';

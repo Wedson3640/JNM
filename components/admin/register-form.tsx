@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Eye, EyeOff, KeyRound, Loader2, Lock, Mail, User } from "lucide-react";
+import { Eye, EyeOff, Loader2, Lock, Mail, User } from "lucide-react";
 import { registerUser } from "@/app/cad_users/actions";
 import { adminProfileOptions, type AdminProfile } from "@/lib/admin-access";
 
@@ -49,7 +49,6 @@ export function RegisterForm() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
-  const [code, setCode] = useState("");
   const [profile, setProfile] = useState<AdminProfile>("creche");
   const [message, setMessage] = useState<{ text: string; ok: boolean } | null>(null);
   const [loading, setLoading] = useState(false);
@@ -59,18 +58,18 @@ export function RegisterForm() {
     setMessage(null);
 
     if (password !== confirm) {
-      setMessage({ text: "As senhas não coincidem.", ok: false });
+      setMessage({ text: "As senhas nao coincidem.", ok: false });
       return;
     }
 
     if (password.length < 8) {
-      setMessage({ text: "A senha deve ter no mínimo 8 caracteres.", ok: false });
+      setMessage({ text: "A senha deve ter no minimo 8 caracteres.", ok: false });
       return;
     }
 
     setLoading(true);
     const displayName = firstName.trim();
-    const result = await registerUser(email, password, code, displayName, profile);
+    const result = await registerUser(email, password, displayName, profile);
     setLoading(false);
 
     if (result.error) {
@@ -78,19 +77,18 @@ export function RegisterForm() {
       return;
     }
 
-    setMessage({ text: "Usuário criado com sucesso. Acesse a área interna pelo link de login.", ok: true });
+    setMessage({ text: "Usuario criado com sucesso. Acesse a area interna pelo link de login.", ok: true });
     setFirstName("");
     setEmail("");
     setPassword("");
     setConfirm("");
-    setCode("");
     setProfile("creche");
   }
 
   return (
     <form onSubmit={onSubmit} className="card w-full p-6">
       <h1 className="text-2xl font-semibold text-gray-950">Cadastro de acesso</h1>
-      <p className="mt-2 text-sm">Crie uma conta para acessar a área interna.</p>
+      <p className="mt-2 text-sm">Crie uma conta para acessar a area interna.</p>
 
       <div className="mt-6">
         <label className="block text-sm font-semibold text-gray-950" htmlFor="reg-firstname">
@@ -167,16 +165,6 @@ export function RegisterForm() {
           ))}
         </select>
       </div>
-
-      <label className="mt-4 block text-sm font-semibold text-gray-950" htmlFor="reg-code">
-        Código de acesso
-      </label>
-      <PasswordInput
-        id="reg-code"
-        value={code}
-        onChange={setCode}
-        icon={KeyRound}
-      />
 
       {message ? (
         <p className={`mt-4 rounded-2xl p-3 text-sm ${message.ok ? "bg-emerald-50 text-emerald-700" : "bg-orange-50 text-primary"}`}>

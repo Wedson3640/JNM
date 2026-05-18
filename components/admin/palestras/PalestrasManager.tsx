@@ -4,7 +4,6 @@ import { useEffect, useRef, useState } from "react";
 import { Download, ImageDown, Pencil, Trash2, Upload, X } from "lucide-react";
 import { LectureBanner } from "@/components/banner/LectureBanner";
 import { createSupabaseBrowserClient } from "@/lib/supabase-browser";
-import { SiteConfigPanel } from "@/components/admin/site-config-panel";
 import type { Lecture } from "@/types/lecture";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -626,38 +625,7 @@ function HeroSlidesManager() {
   );
 }
 
-// ─── Tab controller ───────────────────────────────────────────────────────────
-const TABS = [
-  { key: "palestras",    label: "Palestras em destaque" },
-  { key: "atendimento",  label: "Atendimento Fraterno" },
-  { key: "programacao",  label: "Programação da Semana" },
-];
 
 export function PalestrasManager() {
-  const [activeTab, setActiveTab] = useState("palestras");
-
-  return (
-    <div className="space-y-4">
-      <div className="flex flex-wrap gap-2 border-b border-gray-200 pb-3">
-        {TABS.map(({ key, label }) => (
-          <button
-            key={key}
-            type="button"
-            onClick={() => setActiveTab(key)}
-            className={`rounded-lg px-4 py-2 text-sm font-semibold transition-colors ${
-              key === activeTab
-                ? "bg-primary text-white shadow-sm"
-                : "border border-gray-200 bg-white text-gray-600 hover:bg-orange-50 hover:text-primary"
-            }`}
-          >
-            {label}
-          </button>
-        ))}
-      </div>
-
-      {activeTab === "palestras"   && <HeroSlidesManager />}
-      {activeTab === "atendimento" && <SiteConfigPanel sectionKeys={["fraternal_care"]} />}
-      {activeTab === "programacao" && <SiteConfigPanel sectionKeys={["weekly_schedule"]} />}
-    </div>
-  );
+  return <HeroSlidesManager />;
 }

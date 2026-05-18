@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Baby, BookOpen, HandHeart, LayoutDashboard, Mic2, X } from "lucide-react";
+import { Baby, BookOpen, HandHeart, LayoutDashboard, Mic2, Settings, X } from "lucide-react";
 import { createSupabaseBrowserClient } from "@/lib/supabase-browser";
 import { getAdminProfile, getAllowedAdminNavItems, normalizeAdminProfile, type AdminProfile } from "@/lib/admin-access";
 
@@ -13,6 +13,7 @@ const logoJnm = "/images/logo%20JNM%20(1).png";
 const iconsByHref = {
   "/admin": LayoutDashboard,
   "/admin/creche": Baby,
+  "/admin/creche/config": Settings,
   "/admin/palestras": Mic2,
   "/admin/servicos": HandHeart,
   "/admin/livraria": BookOpen,
