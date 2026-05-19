@@ -229,13 +229,24 @@ function HeroSlidesManager() {
   }
 
   async function downloadBanner() {
-    const src      = previewWeb;
+    if (!previewLecture) return;
+    const params = new URLSearchParams({
+      speaker:   previewLecture.speakerName,
+      theme:     previewLecture.theme,
+      date:      previewLecture.date,
+      weekday:   previewLecture.weekday,
+      time:      previewLecture.time,
+      platforms: previewLecture.platforms,
+      photo:     previewLecture.speakerImage ?? "",
+    });
+    const src      = `/api/banner-web?${params.toString()}`;
     const filename = "banner-palestra-1536x1024.png";
-    if (!src) return;
     setDownloading(true);
     try {
       const res = await fetch(src);
-      if (!res.ok) throw new Error("Falha ao carregar imagem");
+      if (!res.ok) throw new Error(`Falha ao gerar imagem: ${res.status}`);
+      const contentType = res.headers.get("content-type") ?? "";
+      if (!contentType.includes("image")) throw new Error("Resposta não é uma imagem");
       const blob      = await res.blob();
       const objectUrl = URL.createObjectURL(blob);
       const a         = document.createElement("a");
@@ -245,8 +256,8 @@ function HeroSlidesManager() {
       a.click();
       document.body.removeChild(a);
       setTimeout(() => URL.revokeObjectURL(objectUrl), 200);
-    } catch {
-      setMessage({ text: "Erro ao baixar o banner. Tente novamente.", ok: false });
+    } catch (e) {
+      setMessage({ text: `Erro ao baixar o banner: ${e instanceof Error ? e.message : "tente novamente"}`, ok: false });
     } finally {
       setDownloading(false);
     }
