@@ -1,25 +1,25 @@
+import { readFile } from "fs/promises";
+import { join } from "path";
 import { ImageResponse } from "next/og";
 
-export const runtime = "edge";
+async function localImageAsDataUrl(publicPath: string): Promise<string | null> {
+  try {
+    const buf  = await readFile(join(process.cwd(), "public", publicPath));
+    const mime = publicPath.endsWith(".png") ? "image/png" : "image/jpeg";
+    return `data:${mime};base64,${buf.toString("base64")}`;
+  } catch {
+    return null;
+  }
+}
 
-const BASE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3002";
-const LOGO_JNM = `${BASE_URL}/images/logo%20JNM%20horizontal.png`;
-const LOGO_UEPI = `${BASE_URL}/images/UEPI.png`;
-
-async function fetchAsDataUrl(url: string): Promise<string | null> {
+async function remoteImageAsDataUrl(url: string): Promise<string | null> {
   if (!url) return null;
   try {
     const res = await fetch(url, { cache: "no-store" });
     if (!res.ok) return null;
-    const buf   = await res.arrayBuffer();
-    const bytes = new Uint8Array(buf);
-    let binary  = "";
-    const chunk = 8192;
-    for (let i = 0; i < bytes.length; i += chunk) {
-      binary += String.fromCharCode(...Array.from(bytes.slice(i, i + chunk)));
-    }
+    const buf  = Buffer.from(await res.arrayBuffer());
     const mime = res.headers.get("content-type") ?? "image/png";
-    return `data:${mime};base64,${btoa(binary)}`;
+    return `data:${mime};base64,${buf.toString("base64")}`;
   } catch {
     return null;
   }
@@ -43,13 +43,13 @@ function formatTheme(s: string) {
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
 
-  const speaker = searchParams.get("speaker") ?? "";
-  const theme = formatTheme(searchParams.get("theme") ?? "");
-  const date = searchParams.get("date") ?? "";
-  const weekday = searchParams.get("weekday") ?? "";
-  const time = searchParams.get("time") ?? "";
-  const platforms = searchParams.get("platforms") ?? "YouTube";
-  const photo = searchParams.get("photo") ?? "";
+  const speaker   = searchParams.get("speaker")   ?? "";
+  const theme     = formatTheme(searchParams.get("theme") ?? "");
+  const date      = searchParams.get("date")       ?? "";
+  const weekday   = searchParams.get("weekday")    ?? "";
+  const time      = searchParams.get("time")       ?? "";
+  const platforms = searchParams.get("platforms")  ?? "YouTube";
+  const photo     = searchParams.get("photo")      ?? "";
 
   const showFb = platforms === "Facebook" || platforms === "Ambos";
   const showYt = platforms === "YouTube"  || platforms === "Ambos";
@@ -59,19 +59,19 @@ export async function GET(request: Request) {
       .then((r) => r.arrayBuffer()).catch(() => null),
     fetch("https://raw.githubusercontent.com/google/fonts/main/ofl/opensans/OpenSans%5Bwdth,wght%5D.ttf")
       .then((r) => r.arrayBuffer()).catch(() => null),
-    fetchAsDataUrl(photo),
-    fetchAsDataUrl(LOGO_JNM),
-    fetchAsDataUrl(LOGO_UEPI),
+    remoteImageAsDataUrl(photo),
+    localImageAsDataUrl("images/logo JNM horizontal.png"),
+    localImageAsDataUrl("images/UEPI.png"),
   ]);
 
   type FontWeight = 700 | 800;
   const fonts: { name: string; data: ArrayBuffer; weight: FontWeight; style: "normal" }[] = [];
-  if (fontBold) fonts.push({ name: "Open Sans", data: fontBold, weight: 700, style: "normal" });
+  if (fontBold)      fonts.push({ name: "Open Sans", data: fontBold,      weight: 700, style: "normal" });
   if (fontExtraBold) fonts.push({ name: "Open Sans", data: fontExtraBold, weight: 800, style: "normal" });
 
-  const fontFamily = fonts.length ? "Open Sans" : "sans-serif";
+  const fontFamily  = fonts.length ? "Open Sans" : "sans-serif";
   const speakerSize = speaker.length > 28 ? 54 : 66;
-  const themeSize = theme.length > 36 ? 34 : theme.length > 22 ? 39 : 45;
+  const themeSize   = theme.length > 36 ? 34 : theme.length > 22 ? 39 : 45;
 
   return new ImageResponse(
     (
