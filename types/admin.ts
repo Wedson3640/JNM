@@ -23,8 +23,12 @@ export type AdminSection = {
   fields: Array<{
     name: string;
     label: string;
-    type: "text" | "textarea" | "url" | "select";
+    type: "text" | "textarea" | "url" | "select" | "image-upload";
     options?: string[];
+    optionLabels?: Record<string, string>;
+    bucket?: string;
+    placeholder?: string;
+    visibleWhen?: { field: string; value: string };
     required?: boolean;
   }>;
 };

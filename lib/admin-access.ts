@@ -1,4 +1,4 @@
-export type AdminProfile = "admin" | "creche" | "palestras" | "livraria" | "servicos";
+export type AdminProfile = "admin" | "creche" | "palestras" | "livraria" | "servicos" | "videos";
 
 export type AdminNavItem = {
   label: string;
@@ -7,11 +7,12 @@ export type AdminNavItem = {
 };
 
 export const adminProfileOptions: { value: AdminProfile; label: string }[] = [
-  { value: "admin", label: "Admin" },
-  { value: "creche", label: "Creche Miranez" },
-  { value: "palestras", label: "Config. Palestra" },
+  { value: "admin",    label: "Admin" },
+  { value: "creche",   label: "Creche Miranez" },
+  { value: "palestras",label: "Config. Palestra" },
   { value: "livraria", label: "Livraria" },
   { value: "servicos", label: "Serv. Social" },
+  { value: "videos",   label: "Vídeos" },
 ];
 
 export const adminNavAccess: AdminNavItem[] = [
@@ -21,6 +22,7 @@ export const adminNavAccess: AdminNavItem[] = [
   { label: "Config. Palestra", href: "/admin/palestras", profile: "palestras" },
   { label: "Serv. Sociais", href: "/admin/servicos", profile: "servicos" },
   { label: "Livraria", href: "/admin/livraria", profile: "livraria" },
+  { label: "Vídeos",   href: "/admin/videos",   profile: "videos" },
 ];
 
 const profileAliases: Record<string, AdminProfile> = {

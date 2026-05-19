@@ -71,12 +71,16 @@ export async function getPublicSiteData(): Promise<PublicSiteData> {
       ? scheduleResult.data.map((row) => [row.weekday, row.time, row.title] as [string, string, string])
       : fallback.weeklySchedule,
     events: eventResult.data?.length
-      ? eventResult.data.map((row) => ({
-          title: row.title,
-          dateLabel: row.date_label,
-          description: row.description,
-          imageUrl: row.image_url
-        }))
+      ? [
+          // Evento em destaque primeiro
+          ...eventResult.data
+            .filter((row) => row.type === "featured")
+            .map((row) => ({ title: row.title, dateLabel: row.date_label, description: row.description, imageUrl: row.image_url })),
+          // Demais eventos na lista
+          ...eventResult.data
+            .filter((row) => row.type !== "featured")
+            .map((row) => ({ title: row.title, dateLabel: row.date_label, description: row.description, imageUrl: null })),
+        ]
       : fallback.events,
     studyGroups: studyResult.data?.length
       ? studyResult.data.map((row) => ({

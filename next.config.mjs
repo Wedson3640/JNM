@@ -11,7 +11,13 @@ const nextConfig = {
         protocol: "https",
         hostname: "*.supabase.co",
         pathname: "/storage/v1/object/public/**"
-      }
+      },
+      // Miniaturas de vídeos do Facebook
+      { protocol: "https", hostname: "*.fbcdn.net" },
+      { protocol: "https", hostname: "*.facebook.com" },
+      // Miniaturas do YouTube
+      { protocol: "https", hostname: "i.ytimg.com" },
+      { protocol: "https", hostname: "img.youtube.com" }
     ]
   },
   poweredByHeader: false,

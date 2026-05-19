@@ -72,14 +72,28 @@ export const adminSections: AdminSection[] = [
   {
     key: "events",
     title: "Eventos",
-    description: "Feira do Livro e lista de eventos.",
+    description: "Evento em destaque (com imagem) ou item da lista (sem imagem).",
     table: "events",
     fields: [
-      { name: "title", label: "Título", type: "text", required: true },
-      { name: "date_label", label: "Data", type: "text", required: true },
-      { name: "description", label: "Descrição", type: "textarea", required: true },
-      { name: "image_url", label: "URL da imagem", type: "url" },
-      { name: "status", label: "Status", type: "select", options: ["published", "draft"], required: true }
+      {
+        name: "type",
+        label: "Tipo de evento",
+        type: "select",
+        options: ["featured", "list"],
+        optionLabels: { featured: "Evento em Destaque", list: "Apenas na Lista" },
+        required: true,
+      },
+      { name: "title",       label: "Título",     type: "text",     required: true },
+      { name: "date_label",  label: "Data",        type: "text",     required: true, placeholder: "Ex: 02 Junho  ou  18,19 Julho" },
+      { name: "description", label: "Descrição",   type: "textarea", required: true },
+      {
+        name: "image_url",
+        label: "Imagem do evento",
+        type: "image-upload",
+        bucket: "event-images",
+        visibleWhen: { field: "type", value: "featured" },
+      },
+      { name: "status", label: "Status", type: "select", options: ["published", "draft"], required: true },
     ]
   },
   {

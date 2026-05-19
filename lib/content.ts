@@ -23,7 +23,7 @@ export const navigation = [
 ];
 
 export const navLinks = [
-  { label: "Início",         href: "#inicio" },
+  { label: "Início",         href: "/" },
   { label: "Livraria",       href: "/livraria" },
   { label: "Creche Miranez", href: "/creche-miranez" },
   { label: "Programação",    href: "/programacao" },
@@ -168,7 +168,7 @@ export const initialNews: NewsItem[] = [
 
 export const areas: AreaItem[] = [
   {
-    title: "Creche Miranes",
+    title: "Creche Miranez",
     description: "Educação com amor para o futuro das nossas crianças.",
     icon: Baby,
     tone: "bg-purple-50 text-purple-700"

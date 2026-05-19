@@ -1,5 +1,6 @@
-import { Baby, BookOpen, CalendarDays, GraduationCap, HandHeart, HeartPulse, MessageCircleHeart } from "lucide-react";
+import { Baby, CalendarDays, GraduationCap, HandHeart, HeartPulse, MessageCircleHeart } from "lucide-react";
 import { Card, SectionHeader } from "@/components/ui";
+import { FeaturedEventCard } from "@/components/home/featured-event-card";
 import type { NewsItem } from "@/types/content";
 import type { EventItem, HouseAreaItem } from "@/types/site";
 
@@ -51,6 +52,7 @@ export function NewsAreasEvents({
         <div className="space-y-3">
           {areas.map(({ title, description }, index) => {
             const Icon = areaIcons[index % areaIcons.length];
+            const href = title === "Creche Miranez" ? "/creche-miranez" : "#contato";
 
             return (
               <article key={title} className="grid grid-cols-[64px_1fr_auto] items-center gap-4 rounded-2xl border border-orange-100 p-3">
@@ -61,7 +63,7 @@ export function NewsAreasEvents({
                   <h3 className="text-sm font-semibold text-gray-950">{title}</h3>
                   <p className="text-sm">{description}</p>
                 </div>
-                <a href="#contato" className="button-outline hidden px-3 py-2 text-xs sm:inline-flex">
+                <a href={href} className="button-outline hidden px-3 py-2 text-xs sm:inline-flex">
                   Saiba mais
                 </a>
               </article>
@@ -72,34 +74,30 @@ export function NewsAreasEvents({
 
       <Card id="eventos" className="md:col-span-3 xl:col-span-3">
         <SectionHeader title="Eventos da Casa" />
-        <article className="mb-4 rounded-2xl bg-secondary/50 p-8 text-center shadow-md">
-          <h3 className="text-4xl font-bold uppercase tracking-wide text-gray-900">
-            {featuredEvent?.title ?? "Feira do Livro"}
-          </h3>
-          <BookOpen className="mx-auto my-3 h-12 w-12 text-gray-900" />
-          <p className="text-xl font-bold uppercase text-primary">
-            {featuredEvent?.dateLabel ?? "De 24 a 26 de Maio"}
-          </p>
-          <p className="mt-2 font-semibold text-gray-950">Teresina Shopping</p>
-          <p className="mt-3 text-sm">
-            {featuredEvent?.description ?? "Venha conhecer, aprender e se inspirar."}
-          </p>
-        </article>
 
-        <div className="space-y-3">
-          {eventList.slice(0, 2).map(({ dateLabel, title, description }) => {
-            const [day = "", month = ""] = dateLabel.split(" ");
+        <FeaturedEventCard event={featuredEvent} />
+
+        {/* Lista de outros eventos */}
+        <div className="space-y-2">
+          {eventList.slice(0, 3).map(({ dateLabel, title, description }) => {
+            const match = dateLabel.match(/^([^\s/]+)[\s/](.+)$/);
+            const day   = match ? match[1] : dateLabel;
+            const month = match ? match[2] : "";
 
             return (
-              <article key={title} className="grid grid-cols-[64px_1fr] gap-4 rounded-2xl bg-orange-50 p-4">
-                <div className="text-center">
-                  <CalendarDays className="mx-auto h-6 w-6 text-primary" />
-                  <p className="text-3xl font-bold text-gray-950">{day}</p>
-                  <p className="font-semibold uppercase text-gray-950">{month}</p>
+              <article key={title} className="grid grid-cols-[52px_1fr] gap-3 rounded-2xl bg-orange-50 p-3">
+                <div className="flex flex-col items-center justify-center gap-0.5 rounded-xl bg-white px-1 py-2 shadow-sm">
+                  <CalendarDays className="h-4 w-4 text-primary" />
+                  <p className="w-full text-center text-xs font-extrabold leading-none text-gray-950">
+                    {day}
+                  </p>
+                  <p className="w-full text-center text-xs font-semibold capitalize leading-none text-gray-500">
+                    {month || "—"}
+                  </p>
                 </div>
-                <div>
-                  <h3 className="text-sm font-semibold uppercase text-gray-950">{title}</h3>
-                  <p className="text-sm">{description}</p>
+                <div className="flex flex-col justify-center">
+                  <h3 className="text-xs font-bold uppercase text-gray-950">{title}</h3>
+                  <p className="mt-0.5 line-clamp-2 text-xs text-gray-500">{description}</p>
                 </div>
               </article>
             );
