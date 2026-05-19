@@ -6,6 +6,25 @@ const BASE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3002";
 const LOGO_JNM = `${BASE_URL}/images/logo%20JNM%20horizontal.png`;
 const LOGO_UEPI = `${BASE_URL}/images/UEPI.png`;
 
+async function fetchAsDataUrl(url: string): Promise<string | null> {
+  if (!url) return null;
+  try {
+    const res = await fetch(url, { cache: "no-store" });
+    if (!res.ok) return null;
+    const buf   = await res.arrayBuffer();
+    const bytes = new Uint8Array(buf);
+    let binary  = "";
+    const chunk = 8192;
+    for (let i = 0; i < bytes.length; i += chunk) {
+      binary += String.fromCharCode(...Array.from(bytes.slice(i, i + chunk)));
+    }
+    const mime = res.headers.get("content-type") ?? "image/png";
+    return `data:${mime};base64,${btoa(binary)}`;
+  } catch {
+    return null;
+  }
+}
+
 function formatTheme(s: string) {
   const lowercaseWords = new Set(["a", "as", "ao", "aos", "da", "das", "de", "do", "dos", "e", "em", "na", "nas", "no", "nos", "o", "os", "ou", "para", "por"]);
 
@@ -33,15 +52,16 @@ export async function GET(request: Request) {
   const photo = searchParams.get("photo") ?? "";
 
   const showFb = platforms === "Facebook" || platforms === "Ambos";
-  const showYt = platforms === "YouTube" || platforms === "Ambos";
+  const showYt = platforms === "YouTube"  || platforms === "Ambos";
 
-  const [fontBold, fontExtraBold] = await Promise.all([
+  const [fontBold, fontExtraBold, photoDataUrl, logoJnmDataUrl, logoUepiDataUrl] = await Promise.all([
     fetch("https://raw.githubusercontent.com/google/fonts/main/ofl/opensans/OpenSans%5Bwdth,wght%5D.ttf")
-      .then((r) => r.arrayBuffer())
-      .catch(() => null),
+      .then((r) => r.arrayBuffer()).catch(() => null),
     fetch("https://raw.githubusercontent.com/google/fonts/main/ofl/opensans/OpenSans%5Bwdth,wght%5D.ttf")
-      .then((r) => r.arrayBuffer())
-      .catch(() => null),
+      .then((r) => r.arrayBuffer()).catch(() => null),
+    fetchAsDataUrl(photo),
+    fetchAsDataUrl(LOGO_JNM),
+    fetchAsDataUrl(LOGO_UEPI),
   ]);
 
   type FontWeight = 700 | 800;
@@ -76,8 +96,8 @@ export async function GET(request: Request) {
 
         <div style={{ display: "flex", flex: 1, padding: "118px 92px 250px 86px", gap: 72, position: "relative" }}>
           <div style={{ width: 430, display: "flex", alignItems: "center", justifyContent: "center" }}>
-            {photo ? (
-              <img alt="" src={photo} width={360} height={360} style={{ borderRadius: "50%", border: "10px solid white", objectFit: "cover", objectPosition: "top", boxShadow: "0 28px 70px rgba(88,28,135,0.26)" }} />
+            {photoDataUrl ? (
+              <img alt="" src={photoDataUrl} width={360} height={360} style={{ borderRadius: "50%", border: "10px solid white", objectFit: "cover", objectPosition: "top", boxShadow: "0 28px 70px rgba(88,28,135,0.26)" }} />
             ) : (
               <div style={{ width: 360, height: 360, borderRadius: "50%", border: "10px solid white", background: "#e9d5ff", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 84, fontWeight: 800, color: "#7c3aed" }}>
                 JNM
@@ -138,9 +158,9 @@ export async function GET(request: Request) {
           <div style={{ position: "absolute", left: -120, top: 39, width: 430, height: 230, borderTopLeftRadius: 420, borderTop: "5px solid #f97316" }} />
           <div style={{ position: "absolute", right: -120, top: 39, width: 430, height: 230, borderTopRightRadius: 420, borderTop: "5px solid #7c3aed" }} />
           <div style={{ position: "absolute", left: 0, right: 0, bottom: 28, height: 110, display: "flex", alignItems: "center", justifyContent: "center", gap: 48 }}>
-            <img alt="" src={LOGO_JNM} width={462} height={120} style={{ objectFit: "contain" }} />
+            {logoJnmDataUrl  && <img alt="" src={logoJnmDataUrl}  width={462} height={120} style={{ objectFit: "contain" }} />}
             <div style={{ width: 1, height: 70, background: "rgba(167,139,250,0.72)" }} />
-            <img alt="" src={LOGO_UEPI} width={129} height={129} style={{ objectFit: "contain" }} />
+            {logoUepiDataUrl && <img alt="" src={logoUepiDataUrl} width={129} height={129} style={{ objectFit: "contain" }} />}
           </div>
         </div>
       </div>
