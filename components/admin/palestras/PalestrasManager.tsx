@@ -229,22 +229,26 @@ function HeroSlidesManager() {
   }
 
   async function downloadBanner() {
-    if (!previewLecture) return;
-    const params = new URLSearchParams({
-      speaker:   previewLecture.speakerName,
-      theme:     previewLecture.theme,
-      date:      previewLecture.date,
-      weekday:   previewLecture.weekday,
-      time:      previewLecture.time,
-      platforms: previewLecture.platforms,
-      photo:     previewLecture.speakerImage ?? "",
-    });
-    const src      = `/api/banner-web?${params.toString()}`;
+    if (!previewWeb && !previewLecture) return;
+    let src = previewWeb;
+    if (!src && previewLecture) {
+      const params = new URLSearchParams({
+        speaker:   previewLecture.speakerName,
+        theme:     previewLecture.theme,
+        date:      previewLecture.date,
+        weekday:   previewLecture.weekday,
+        time:      previewLecture.time,
+        platforms: previewLecture.platforms,
+        photo:     previewLecture.speakerImage ?? "",
+      });
+      src = `/api/banner-web?${params.toString()}`;
+    }
+    if (!src) return;
     const filename = "banner-palestra-1536x1024.png";
     setDownloading(true);
     try {
       const res = await fetch(src);
-      if (!res.ok) throw new Error(`Falha ao gerar imagem: ${res.status}`);
+      if (!res.ok) throw new Error(`Falha ao baixar imagem: ${res.status}`);
       const contentType = res.headers.get("content-type") ?? "";
       if (!contentType.includes("image")) throw new Error("Resposta não é uma imagem");
       const blob      = await res.blob();

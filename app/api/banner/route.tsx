@@ -1,25 +1,44 @@
-import { readFile } from "fs/promises";
-import { join } from "path";
 import { ImageResponse } from "next/og";
 
-async function localImageAsDataUrl(publicPath: string): Promise<string | null> {
+export const runtime = "edge";
+
+async function fetchArrayBuffer(url: string): Promise<ArrayBuffer | null> {
   try {
-    const buf  = await readFile(join(process.cwd(), "public", publicPath));
-    const mime = publicPath.endsWith(".png") ? "image/png" : "image/jpeg";
-    return `data:${mime};base64,${buf.toString("base64")}`;
+    const res = await fetch(url, { cache: "force-cache" });
+    if (!res.ok) return null;
+    return res.arrayBuffer();
   } catch {
     return null;
   }
 }
 
+function publicUrl(requestUrl: string, path: string) {
+  return new URL(path, requestUrl).toString();
+}
+
+function arrayBufferToBase64(buffer: ArrayBuffer) {
+  const bytes = new Uint8Array(buffer);
+  const chunkSize = 0x8000;
+  let binary = "";
+
+  for (let i = 0; i < bytes.length; i += chunkSize) {
+    const chunk = bytes.subarray(i, i + chunkSize);
+    for (let j = 0; j < chunk.length; j += 1) {
+      binary += String.fromCharCode(chunk[j]);
+    }
+  }
+
+  return btoa(binary);
+}
+
 async function remoteImageAsDataUrl(url: string): Promise<string | null> {
   if (!url) return null;
+
   try {
     const res = await fetch(url, { cache: "no-store" });
     if (!res.ok) return null;
-    const buf  = Buffer.from(await res.arrayBuffer());
-    const mime = res.headers.get("content-type") ?? "image/png";
-    return `data:${mime};base64,${buf.toString("base64")}`;
+    const mime = res.headers.get("content-type")?.split(";")[0] ?? "image/png";
+    return `data:${mime};base64,${arrayBufferToBase64(await res.arrayBuffer())}`;
   } catch {
     return null;
   }
@@ -54,22 +73,24 @@ export async function GET(request: Request) {
   const showFb = platforms === "Facebook" || platforms === "Ambos";
   const showYt = platforms === "YouTube"  || platforms === "Ambos";
 
-  const [fontBold, fontExtraBold, photoDataUrl, logoJnmDataUrl, logoUepiDataUrl] = await Promise.all([
-    fetch("https://raw.githubusercontent.com/google/fonts/main/ofl/opensans/OpenSans%5Bwdth,wght%5D.ttf")
-      .then((r) => r.arrayBuffer()).catch(() => null),
-    fetch("https://raw.githubusercontent.com/google/fonts/main/ofl/opensans/OpenSans%5Bwdth,wght%5D.ttf")
-      .then((r) => r.arrayBuffer()).catch(() => null),
+  const logoJnmUrl = publicUrl(request.url, "/images/logo%20JNM%20(1).png");
+  const logoUepiUrl = publicUrl(request.url, "/images/UEPI.png");
+
+  const [fontBold, fontExtraBold, photoDataUrl] = await Promise.all([
+    fetchArrayBuffer(publicUrl(request.url, "/fonts/Poppins-Bold.ttf")),
+    fetchArrayBuffer(publicUrl(request.url, "/fonts/Poppins-ExtraBold.ttf")),
     remoteImageAsDataUrl(photo),
-    localImageAsDataUrl("images/logo JNM (1).png"),
-    localImageAsDataUrl("images/UEPI.png"),
   ]);
 
   type FontWeight = 100 | 200 | 300 | 400 | 500 | 600 | 700 | 800 | 900;
   const fonts: { name: string; data: ArrayBuffer; weight: FontWeight; style: "normal" }[] = [];
-  if (fontBold)      fonts.push({ name: "Open Sans", data: fontBold,      weight: 700, style: "normal" });
-  if (fontExtraBold) fonts.push({ name: "Open Sans", data: fontExtraBold, weight: 800, style: "normal" });
+  if (fontBold) {
+    fonts.push({ name: "Poppins", data: fontBold, weight: 400, style: "normal" });
+    fonts.push({ name: "Poppins", data: fontBold, weight: 700, style: "normal" });
+  }
+  if (fontExtraBold) fonts.push({ name: "Poppins", data: fontExtraBold, weight: 800, style: "normal" });
 
-  const fontFamily = fonts.length ? "Open Sans" : "sans-serif";
+  const fontFamily = fonts.length ? "Poppins" : "sans-serif";
 
   return new ImageResponse(
     (
@@ -100,9 +121,9 @@ export async function GET(request: Request) {
             <div style={{ position: "relative", display: "flex", alignItems: "center", justifyContent: "center" }}>
               <div style={{ position: "absolute", width: 440, height: 440, borderRadius: "50%", background: "rgba(167,139,250,0.45)", filter: "blur(55px)" }} />
               {photoDataUrl ? (
-                <img src={photoDataUrl} width={400} height={400} style={{ borderRadius: "50%", border: "10px solid white", objectFit: "cover", objectPosition: "top", boxShadow: "0 20px 60px rgba(109,40,217,0.35)" }} />
+                <img alt="" src={photoDataUrl} width={400} height={400} style={{ borderRadius: "50%", border: "10px solid white", objectFit: "cover", objectPosition: "top", boxShadow: "0 20px 60px rgba(109,40,217,0.35)" }} />
               ) : (
-                <div style={{ width: 400, height: 400, borderRadius: "50%", border: "10px solid white", background: "#e9d5ff", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 120 }}>👤</div>
+                <div style={{ width: 400, height: 400, borderRadius: "50%", border: "10px solid white", background: "#e9d5ff", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 94, fontWeight: 800, color: "#7c3aed" }}>JNM</div>
               )}
             </div>
           </div>
@@ -120,7 +141,7 @@ export async function GET(request: Request) {
               {showFb && showYt && <div style={{ fontSize: 42, color: "#c4b5fd", fontWeight: 300 }}>|</div>}
               {showYt && (
                 <div style={{ display: "flex", alignItems: "center", gap: 10, background: "#FF0000", color: "white", padding: "12px 26px", borderRadius: 14, fontSize: 30, fontWeight: 700 }}>
-                  ▶ YouTube
+                  YouTube
                 </div>
               )}
             </div>
@@ -146,10 +167,10 @@ export async function GET(request: Request) {
             {/* Data e hora */}
             <div style={{ display: "flex", gap: 16 }}>
               <div style={{ display: "flex", alignItems: "center", gap: 14, background: "rgba(255,255,255,0.75)", border: "2px solid #e9d5ff", borderRadius: 28, padding: "18px 30px", fontSize: 30, fontWeight: 600, color: "#374151" }}>
-                📅 {date} ({weekday})
+                DATA {date} ({weekday})
               </div>
               <div style={{ display: "flex", alignItems: "center", gap: 14, background: "rgba(255,255,255,0.75)", border: "2px solid #e9d5ff", borderRadius: 28, padding: "18px 30px", fontSize: 30, fontWeight: 600, color: "#374151" }}>
-                🕐 {time}
+                HORA {time}
               </div>
             </div>
           </div>
@@ -161,13 +182,13 @@ export async function GET(request: Request) {
           <div style={{ height: 6, background: "#8b5cf6", opacity: 0.8 }} />
           {/* Conteúdo do rodapé */}
           <div style={{ display: "flex", alignItems: "center", gap: 24, padding: "18px 70px", background: "rgba(255,255,255,0.72)" }}>
-            {logoJnmDataUrl && <img src={logoJnmDataUrl} width={114} height={114} style={{ objectFit: "contain" }} />}
+            <img alt="" src={logoJnmUrl} width={114} height={114} style={{ objectFit: "contain" }} />
             <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
               <div style={{ fontSize: 26, color: "#6b7280" }}>Sociedade Espírita</div>
               <div style={{ fontSize: 36, fontWeight: 700, color: "#f97316" }}>João Nunes Maia</div>
             </div>
             <div style={{ flex: 1 }} />
-            {logoUepiDataUrl && <img src={logoUepiDataUrl} width={100} height={100} style={{ objectFit: "contain" }} />}
+            <img alt="" src={logoUepiUrl} width={100} height={100} style={{ objectFit: "contain" }} />
           </div>
         </div>
       </div>
