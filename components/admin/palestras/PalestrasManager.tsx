@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { Download, ImageDown, Pencil, Trash2, Upload, X } from "lucide-react";
+import { toPng } from "html-to-image";
+import { Download, ImageDown, Loader2, Pencil, Trash2, Upload, X } from "lucide-react";
 import { LectureBanner } from "@/components/banner/LectureBanner";
 import { createSupabaseBrowserClient } from "@/lib/supabase-browser";
 import type { Lecture } from "@/types/lecture";
@@ -40,22 +41,6 @@ const STATUS_STYLE: Record<string, string> = {
   draft:     "bg-gray-100 text-gray-500",
 };
 
-function bannerParams(s: Omit<HeroSlide, "id">) {
-  return new URLSearchParams({
-    speaker:   s.speaker_name,
-    theme:     s.theme,
-    date:      s.event_date,
-    weekday:   s.event_weekday,
-    time:      s.event_time,
-    platforms: s.platforms,
-    photo:     s.image_url ?? "",
-  }).toString();
-}
-
-function bannerWebUrl(s: Omit<HeroSlide, "id">) {
-  return `/api/banner-web?${bannerParams(s)}`;
-}
-
 function toLecture(slide: Omit<HeroSlide, "id"> & { id?: string }): Lecture {
   const platform = ["YouTube", "Facebook", "Ambos"].includes(slide.platforms)
     ? slide.platforms
@@ -63,39 +48,42 @@ function toLecture(slide: Omit<HeroSlide, "id"> & { id?: string }): Lecture {
 
   return {
     id: slide.id ?? "preview",
-    speakerName: slide.speaker_name,
+    speakerName:  slide.speaker_name,
     speakerImage: slide.image_url ?? "",
-    theme: slide.theme,
-    date: slide.event_date,
-    weekday: slide.event_weekday,
-    time: slide.event_time,
-    platforms: platform as Lecture["platforms"],
+    theme:        slide.theme,
+    date:         slide.event_date,
+    weekday:      slide.event_weekday,
+    time:         slide.event_time,
+    platforms:    platform as Lecture["platforms"],
   };
 }
 
 function hasLecturePreview(slide: Omit<HeroSlide, "id">) {
   return Boolean(
     slide.speaker_name.trim() ||
-      slide.theme.trim() ||
-      slide.event_date.trim() ||
-      slide.event_weekday.trim() ||
-      slide.event_time.trim()
+    slide.theme.trim()        ||
+    slide.event_date.trim()   ||
+    slide.event_weekday.trim()||
+    slide.event_time.trim()
   );
 }
 
 // ─── Hero Slides Manager ──────────────────────────────────────────────────────
 function HeroSlidesManager() {
-  const [slides,     setSlides]     = useState<HeroSlide[]>([]);
-  const [form,       setForm]       = useState({ ...EMPTY });
-  const [editingId,  setEditingId]  = useState<string | null>(null);
-  const [uploading,        setUploading]        = useState(false);
-  const [saving,           setSaving]           = useState(false);
-  const [generatingBanner, setGeneratingBanner] = useState(false);
-  const [message,          setMessage]          = useState<{ text: string; ok: boolean } | null>(null);
-  const [previewWeb,       setPreviewWeb]       = useState<string | null>(null);
-  const [previewLecture,   setPreviewLecture]   = useState<Lecture | null>(null);
-  const [downloading,      setDownloading]      = useState(false);
-  const fileRef = useRef<HTMLInputElement>(null);
+  const [slides,        setSlides]        = useState<HeroSlide[]>([]);
+  const [form,          setForm]          = useState({ ...EMPTY });
+  const [editingId,     setEditingId]     = useState<string | null>(null);
+  const [uploading,     setUploading]     = useState(false);
+  const [saving,        setSaving]        = useState(false);
+  const [capturing,     setCapturing]     = useState(false);
+  const [downloading,   setDownloading]   = useState(false);
+  const [previewWeb,    setPreviewWeb]    = useState<string | null>(null);
+  const [previewLecture,setPreviewLecture]= useState<Lecture | null>(null);
+  const [message,       setMessage]       = useState<{ text: string; ok: boolean } | null>(null);
+
+  // Ref para captura do banner — aponta para o LectureBanner visível no preview
+  const bannerCaptureRef = useRef<HTMLDivElement>(null);
+  const fileRef          = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     const supabase = createSupabaseBrowserClient();
@@ -106,6 +94,7 @@ function HeroSlidesManager() {
       .then(({ data }) => { if (data) setSlides(data as HeroSlide[]); });
   }, []);
 
+  // ── Upload da foto do palestrante ──────────────────────────────────────────
   async function uploadPhoto(file: File): Promise<string | null> {
     setUploading(true);
     const supabase = createSupabaseBrowserClient();
@@ -130,11 +119,51 @@ function HeroSlidesManager() {
     return publicUrl;
   }
 
+  // ── Captura o LectureBanner do DOM e sobe para o Storage ──────────────────
+  async function captureAndUpload(slideId: string): Promise<string | null> {
+    const el = bannerCaptureRef.current;
+    if (!el) return null;
+
+    try {
+      // Captura o elemento como PNG com resolução 3×
+      const dataUrl = await toPng(el, {
+        pixelRatio: 3,
+        cacheBust:  true,
+        quality:    1,
+      });
+
+      // Converte data URL → Blob
+      const res  = await fetch(dataUrl);
+      const blob = await res.blob();
+
+      // Sobe para o bucket "banners"
+      const supabase = createSupabaseBrowserClient();
+      const path     = `${slideId}.png`;
+
+      const { error } = await supabase.storage
+        .from("banners")
+        .upload(path, blob, { contentType: "image/png", upsert: true });
+
+      if (error) return null;
+
+      const { data: { publicUrl } } = supabase.storage
+        .from("banners")
+        .getPublicUrl(path);
+
+      return publicUrl;
+    } catch {
+      return null;
+    }
+  }
+
+  // ── Salvar palestra ────────────────────────────────────────────────────────
   async function save(e: React.FormEvent) {
     e.preventDefault();
     setMessage(null);
 
-    const required: (keyof typeof form)[] = ["speaker_name", "theme", "event_date", "event_weekday", "event_time"];
+    const required: (keyof typeof form)[] = [
+      "speaker_name", "theme", "event_date", "event_weekday", "event_time",
+    ];
     const missing = required.find((k) => !String(form[k] ?? "").trim());
     if (missing) {
       setMessage({ text: "Preencha todos os campos obrigatórios.", ok: false });
@@ -148,7 +177,7 @@ function HeroSlidesManager() {
       label: form.speaker_name,
       title: form.speaker_name,
       meta:  form.theme,
-      id: editingId ?? crypto.randomUUID(),
+      id:    editingId ?? crypto.randomUUID(),
     };
 
     const { error } = await supabase.from("hero_slides").upsert(payload);
@@ -159,58 +188,41 @@ function HeroSlidesManager() {
       return;
     }
 
-    // Gera e sobe o banner compartilhavel.
-    setGeneratingBanner(true);
-    setPreviewWeb(null);
-    const generatedBannerUrl = await uploadBannerToStorage(payload.id, bannerWebUrl(form));
-    setGeneratingBanner(false);
+    // Atualiza preview para o elemento capturável mostrar os dados salvos
+    const lecture = toLecture(payload);
+    setPreviewLecture(lecture);
 
-    const webPreviewUrl = generatedBannerUrl ?? bannerWebUrl(form);
-    const bannerUpdates: Partial<HeroSlide> = {
-      banner_web_url: webPreviewUrl,
-      banner_url: webPreviewUrl,
-    };
-    payload.banner_web_url = webPreviewUrl;
-    payload.banner_url = webPreviewUrl;
-    const { error: bannerUpdateError } = await supabase.from("hero_slides").update(bannerUpdates).eq("id", payload.id);
+    // Aguarda o React renderizar o LectureBanner com os dados novos
+    setCapturing(true);
+    await new Promise((r) => setTimeout(r, 600));
 
-    setPreviewWeb(webPreviewUrl);
-    setPreviewLecture(toLecture(payload));
+    const bannerUrl = await captureAndUpload(payload.id);
+    setCapturing(false);
+
+    if (bannerUrl) {
+      payload.banner_url     = bannerUrl;
+      payload.banner_web_url = bannerUrl;
+      await supabase
+        .from("hero_slides")
+        .update({ banner_url: bannerUrl, banner_web_url: bannerUrl })
+        .eq("id", payload.id);
+      setPreviewWeb(bannerUrl);
+    } else {
+      setPreviewWeb(null);
+    }
 
     setSlides((prev) => [payload, ...prev.filter((s) => s.id !== payload.id)]);
-    setMessage(
-      bannerUpdateError
-        ? { text: `Palestra salva, mas a URL do banner não foi gravada: ${bannerUpdateError.message}`, ok: false }
-        : { text: "Salvo com sucesso! Banner gerado →", ok: true }
-    );
+    setMessage({
+      text: bannerUrl
+        ? "Salvo com sucesso! Banner capturado e salvo ✓"
+        : "Palestra salva, mas o banner não pôde ser capturado (tente novamente).",
+      ok: !!bannerUrl,
+    });
     setEditingId(null);
     setForm({ ...EMPTY });
   }
 
-  async function uploadBannerToStorage(slideId: string, apiUrl: string, suffix = ""): Promise<string | null> {
-    try {
-      const res = await fetch(apiUrl);
-      if (!res.ok) return null;
-      const blob      = await res.blob();
-      const path      = `${slideId}${suffix}.png`;
-      const supabase  = createSupabaseBrowserClient();
-      const { error } = await supabase.storage
-        .from("banners")
-        .upload(path, blob, { contentType: "image/png", upsert: true });
-      if (error) return null;
-      const { data: { publicUrl } } = supabase.storage.from("banners").getPublicUrl(path);
-      return publicUrl;
-    } catch {
-      return null;
-    }
-  }
-
-  async function remove(slide: HeroSlide) {
-    const supabase = createSupabaseBrowserClient();
-    await supabase.from("hero_slides").delete().eq("id", slide.id);
-    setSlides((prev) => prev.filter((s) => s.id !== slide.id));
-  }
-
+  // ── Editar ────────────────────────────────────────────────────────────────
   function edit(slide: HeroSlide) {
     setEditingId(slide.id);
     setForm({
@@ -223,45 +235,39 @@ function HeroSlidesManager() {
       image_url:     slide.image_url,
       status:        slide.status,
     });
-    setPreviewWeb(slide.banner_web_url ?? bannerWebUrl(slide));
+    setPreviewWeb(slide.banner_url ?? slide.banner_web_url ?? null);
     setPreviewLecture(toLecture(slide));
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
+  // ── Remover ───────────────────────────────────────────────────────────────
+  async function remove(slide: HeroSlide) {
+    const supabase = createSupabaseBrowserClient();
+    await supabase.from("hero_slides").delete().eq("id", slide.id);
+    setSlides((prev) => prev.filter((s) => s.id !== slide.id));
+  }
+
+  // ── Download do banner salvo ───────────────────────────────────────────────
   async function downloadBanner() {
-    if (!previewWeb && !previewLecture) return;
-    let src = previewWeb;
-    if (!src && previewLecture) {
-      const params = new URLSearchParams({
-        speaker:   previewLecture.speakerName,
-        theme:     previewLecture.theme,
-        date:      previewLecture.date,
-        weekday:   previewLecture.weekday,
-        time:      previewLecture.time,
-        platforms: previewLecture.platforms,
-        photo:     previewLecture.speakerImage ?? "",
-      });
-      src = `/api/banner-web?${params.toString()}`;
-    }
-    if (!src) return;
-    const filename = "banner-palestra-1536x1024.png";
+    if (!previewWeb) return;
     setDownloading(true);
     try {
-      const res = await fetch(src);
-      if (!res.ok) throw new Error(`Falha ao baixar imagem: ${res.status}`);
-      const contentType = res.headers.get("content-type") ?? "";
-      if (!contentType.includes("image")) throw new Error("Resposta não é uma imagem");
+      const res = await fetch(previewWeb);
+      if (!res.ok) throw new Error(`Status ${res.status}`);
       const blob      = await res.blob();
       const objectUrl = URL.createObjectURL(blob);
       const a         = document.createElement("a");
       a.href          = objectUrl;
-      a.download      = filename;
+      a.download      = "banner-palestra.png";
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
       setTimeout(() => URL.revokeObjectURL(objectUrl), 200);
-    } catch (e) {
-      setMessage({ text: `Erro ao baixar o banner: ${e instanceof Error ? e.message : "tente novamente"}`, ok: false });
+    } catch (err) {
+      setMessage({
+        text: `Erro ao baixar: ${err instanceof Error ? err.message : "tente novamente"}`,
+        ok: false,
+      });
     } finally {
       setDownloading(false);
     }
@@ -271,45 +277,39 @@ function HeroSlidesManager() {
     ? toLecture({ ...form, id: editingId ?? "preview" })
     : previewLecture;
 
+  const isWorking = saving || capturing || uploading;
+
   return (
     <>
-    {/* ── Overlay de geração de banner ── */}
-    {generatingBanner && (
-      <div className="fixed inset-0 z-[9999] flex flex-col items-center justify-center gap-6 bg-black/40 backdrop-blur-sm">
-        <div className="flex flex-col items-center gap-5 rounded-2xl bg-white px-10 py-8 shadow-2xl">
-          {/* Spinner triplo */}
-          <div className="relative flex h-20 w-20 items-center justify-center">
-            <span className="absolute inline-block h-20 w-20 animate-spin rounded-full border-4 border-violet-200 border-t-violet-600" />
-            <span className="absolute inline-block h-14 w-14 animate-spin rounded-full border-4 border-orange-100 border-t-orange-400" style={{ animationDirection: "reverse", animationDuration: "0.8s" }} />
-            <span className="h-6 w-6 rounded-full bg-gradient-to-br from-violet-500 to-orange-400" />
+      {/* ── Overlay de captura ───────────────────────────────────────────── */}
+      {capturing && (
+        <div className="fixed inset-0 z-[9999] flex flex-col items-center justify-center gap-6 bg-black/40 backdrop-blur-sm">
+          <div className="flex flex-col items-center gap-5 rounded-2xl bg-white px-10 py-8 shadow-2xl">
+            <div className="relative flex h-20 w-20 items-center justify-center">
+              <span className="absolute inline-block h-20 w-20 animate-spin rounded-full border-4 border-violet-200 border-t-violet-600" />
+              <span className="absolute inline-block h-14 w-14 animate-spin rounded-full border-4 border-orange-100 border-t-orange-400" style={{ animationDirection: "reverse", animationDuration: "0.8s" }} />
+              <span className="h-6 w-6 rounded-full bg-gradient-to-br from-violet-500 to-orange-400" />
+            </div>
+            <div className="text-center">
+              <p className="text-lg font-bold text-gray-900">Capturando banner…</p>
+              <p className="mt-1 text-sm text-gray-500">Convertendo o preview em imagem PNG</p>
+            </div>
+            <div className="h-1.5 w-64 overflow-hidden rounded-full bg-gray-100">
+              <div
+                className="h-full w-1/3 rounded-full bg-gradient-to-r from-violet-500 via-fuchsia-400 to-orange-400"
+                style={{ animation: "captureProgress 1.4s ease-in-out infinite" }}
+              />
+            </div>
           </div>
-
-          {/* Textos */}
-          <div className="text-center">
-            <p className="text-lg font-bold text-gray-900">Gerando banner…</p>
-            <p className="mt-1 text-sm text-gray-500">
-              Aguarde enquanto o banner 1536×1024 é criado
-            </p>
-          </div>
-
-          {/* Barra de progresso indeterminada */}
-          <div className="h-1.5 w-64 overflow-hidden rounded-full bg-gray-100">
-            <div
-              className="h-full w-1/3 rounded-full bg-gradient-to-r from-violet-500 via-fuchsia-400 to-orange-400"
-              style={{ animation: "bannerProgress 1.4s ease-in-out infinite" }}
-            />
-          </div>
+          <style>{`
+            @keyframes captureProgress {
+              0%   { transform: translateX(-100%) scaleX(1); }
+              50%  { transform: translateX(150%) scaleX(1.4); }
+              100% { transform: translateX(300%) scaleX(1); }
+            }
+          `}</style>
         </div>
-
-        <style>{`
-          @keyframes bannerProgress {
-            0%   { transform: translateX(-100%) scaleX(1); }
-            50%  { transform: translateX(150%) scaleX(1.4); }
-            100% { transform: translateX(300%) scaleX(1); }
-          }
-        `}</style>
-      </div>
-    )}
+      )}
 
     <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_minmax(520px,0.9fr)]">
 
@@ -465,10 +465,11 @@ function HeroSlidesManager() {
           <div className="mt-5 flex flex-wrap gap-3">
             <button
               type="submit"
-              disabled={saving || uploading || generatingBanner}
-              className="rounded-xl bg-primary px-6 py-2.5 text-sm font-bold text-white hover:bg-orange-600 disabled:opacity-50"
+              disabled={isWorking}
+              className="inline-flex items-center gap-2 rounded-xl bg-primary px-6 py-2.5 text-sm font-bold text-white hover:bg-orange-600 disabled:opacity-50"
             >
-              {saving ? "Salvando…" : generatingBanner ? "Gerando banner…" : "Salvar e gerar banner"}
+              {isWorking && <Loader2 className="h-4 w-4 animate-spin" />}
+              {saving ? "Salvando…" : capturing ? "Capturando banner…" : "Salvar e capturar banner"}
             </button>
             {editingId && (
               <button
@@ -482,55 +483,16 @@ function HeroSlidesManager() {
           </div>
         </form>
 
-        {/* Preview mobile: antes da lista de palestras */}
+        {/* Preview mobile */}
         <div className="xl:hidden">
-          <div className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
-            <h3 className="mb-3 font-bold text-gray-900">Preview do Banner</h3>
-            <p className="mb-4 text-xs font-semibold text-gray-500">Banner gerado: 1536Ã—1024</p>
-
-            {generatingBanner ? (
-              <div className="animate-pulse space-y-3">
-                <div className="flex items-center justify-center gap-2 rounded-xl bg-violet-50 py-3 text-sm font-semibold text-violet-500">
-                  <svg className="h-4 w-4 animate-spin" viewBox="0 0 24 24" fill="none">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4l3-3-3-3V4a10 10 0 100 20v-4l-3 3 3 3v-4a8 8 0 01-8-8z" />
-                  </svg>
-                  Gerando bannerâ€¦
-                </div>
-                <div className="overflow-hidden rounded-xl border border-gray-100 bg-gray-100">
-                  <div className="aspect-[4/5] w-full rounded-xl bg-gradient-to-br from-violet-100 via-gray-100 to-orange-50" />
-                </div>
-                <div className="space-y-2 px-1">
-                  <div className="h-3 w-3/4 rounded bg-gray-200" />
-                  <div className="h-3 w-1/2 rounded bg-gray-200" />
-                </div>
-              </div>
-            ) : livePreviewLecture ? (
-              <>
-                <div className="overflow-hidden rounded-xl border border-gray-100 bg-gray-50 [&>section]:min-h-[360px] [&>section]:shadow-none [&>section]:ring-0 sm:[&>section]:h-[420px]">
-                  <LectureBanner lecture={livePreviewLecture} />
-                </div>
-                {previewWeb ? (
-                  <button
-                    type="button"
-                    onClick={downloadBanner}
-                    disabled={downloading}
-                    className="mt-4 flex w-full items-center justify-center gap-2 rounded-xl bg-primary px-4 py-3 text-sm font-bold text-white hover:bg-orange-600 disabled:opacity-60"
-                  >
-                    <Download className="h-4 w-4" />
-                    {downloading ? "Baixando..." : "Baixar Banner Site"}
-                  </button>
-                ) : null}
-              </>
-            ) : (
-              <div className="flex aspect-[4/5] flex-col items-center justify-center gap-3 rounded-xl border-2 border-dashed border-gray-100 bg-gray-50">
-                <ImageDown className="h-10 w-10 text-gray-200" />
-                <p className="max-w-[180px] text-center text-sm text-gray-400">
-                  Preencha o formulÃ¡rio e clique em <strong>Salvar</strong> para gerar o banner
-                </p>
-              </div>
-            )}
-          </div>
+          <PreviewCard
+            livePreviewLecture={livePreviewLecture}
+            capturing={capturing}
+            previewWeb={previewWeb}
+            downloading={downloading}
+            onDownload={downloadBanner}
+            captureRef={null}
+          />
         </div>
 
         {/* Lista de palestras cadastradas */}
@@ -557,7 +519,7 @@ function HeroSlidesManager() {
                   <span className={`shrink-0 rounded-full px-2.5 py-0.5 text-xs font-semibold ${STATUS_STYLE[slide.status] ?? "bg-gray-100 text-gray-500"}`}>
                     {slide.status === "published" ? "Publicado" : "Rascunho"}
                   </span>
-                  <div className="flex shrink-0 gap-1">
+                  <div className="flex shrink-0 gap-2">
                     <button
                       type="button"
                       title="Editar"
@@ -582,64 +544,87 @@ function HeroSlidesManager() {
         </div>
       </div>
 
-      {/* ── Coluna direita: banner preview ── */}
+      {/* ── Coluna direita: preview desktop ── */}
       <div className="hidden h-fit xl:sticky xl:top-6 xl:block">
-        <div className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
-          <h3 className="mb-3 font-bold text-gray-900">Preview do Banner</h3>
-          <p className="mb-4 text-xs font-semibold text-gray-500">Banner gerado: 1536×1024</p>
-
-          {generatingBanner ? (
-            /* ── Skeleton de loading ── */
-            <div className="animate-pulse space-y-3">
-              <div className="flex items-center justify-center gap-2 rounded-xl bg-violet-50 py-3 text-sm font-semibold text-violet-500">
-                <svg className="h-4 w-4 animate-spin" viewBox="0 0 24 24" fill="none">
-                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4l3-3-3-3V4a10 10 0 100 20v-4l-3 3 3 3v-4a8 8 0 01-8-8z" />
-                </svg>
-                Gerando banner…
-              </div>
-              {/* Skeleton do banner */}
-              <div className="overflow-hidden rounded-xl border border-gray-100 bg-gray-100">
-                <div className="aspect-[4/5] w-full rounded-xl bg-gradient-to-br from-violet-100 via-gray-100 to-orange-50" />
-              </div>
-              {/* Skeleton das mensagens */}
-              <div className="space-y-2 px-1">
-                <div className="h-3 w-3/4 rounded bg-gray-200" />
-                <div className="h-3 w-1/2 rounded bg-gray-200" />
-              </div>
-            </div>
-          ) : livePreviewLecture ? (
-            <>
-              <div className="overflow-hidden rounded-xl border border-gray-100 bg-gray-50 [&>section]:min-h-[360px] [&>section]:shadow-none [&>section]:ring-0 sm:[&>section]:h-[420px] xl:[&>section]:h-[460px]">
-                <LectureBanner lecture={livePreviewLecture} />
-              </div>
-              {previewWeb ? (
-                <button
-                  type="button"
-                  onClick={downloadBanner}
-                  disabled={downloading}
-                  className="mt-4 flex w-full items-center justify-center gap-2 rounded-xl bg-primary px-4 py-3 text-sm font-bold text-white hover:bg-orange-600 disabled:opacity-60"
-                >
-                  <Download className="h-4 w-4" />
-                  {downloading ? "Baixando..." : "Baixar Banner Site"}
-                </button>
-              ) : null}
-            </>
-          ) : (
-            <div className="flex aspect-[4/5] flex-col items-center justify-center gap-3 rounded-xl border-2 border-dashed border-gray-100 bg-gray-50">
-              <ImageDown className="h-10 w-10 text-gray-200" />
-              <p className="max-w-[180px] text-center text-sm text-gray-400">
-                Preencha o formulário e clique em <strong>Salvar</strong> para gerar o banner
-              </p>
-            </div>
-          )}
-        </div>
+        <PreviewCard
+          livePreviewLecture={livePreviewLecture}
+          capturing={capturing}
+          previewWeb={previewWeb}
+          downloading={downloading}
+          onDownload={downloadBanner}
+          captureRef={bannerCaptureRef}
+        />
       </div>
     </div>
     </>
   );
 }
 
+// ─── Preview Card (reutilizado no mobile e desktop) ───────────────────────────
+function PreviewCard({
+  livePreviewLecture,
+  capturing,
+  previewWeb,
+  downloading,
+  onDownload,
+  captureRef,
+}: {
+  livePreviewLecture: Lecture | null;
+  capturing: boolean;
+  previewWeb: string | null;
+  downloading: boolean;
+  onDownload: () => void;
+  captureRef: React.RefObject<HTMLDivElement> | null;
+}) {
+  return (
+    <div className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
+      <div className="mb-3 flex items-center justify-between">
+        <h3 className="font-bold text-gray-900">Preview do Banner</h3>
+        <span className="rounded-full bg-violet-50 px-2.5 py-0.5 text-[11px] font-semibold text-violet-600">
+          captura direta
+        </span>
+      </div>
+
+      {livePreviewLecture ? (
+        <>
+          {/* Banner capturável */}
+          <div
+            ref={captureRef ?? undefined}
+            className="overflow-hidden rounded-xl border border-gray-100 bg-gray-50 [&>section]:min-h-[360px] [&>section]:shadow-none [&>section]:ring-0 sm:[&>section]:h-[420px] xl:[&>section]:h-[460px]"
+          >
+            <LectureBanner lecture={livePreviewLecture} />
+          </div>
+
+          {/* Botão download */}
+          <button
+            type="button"
+            onClick={onDownload}
+            disabled={downloading || capturing || !previewWeb}
+            className="mt-4 flex w-full items-center justify-center gap-2 rounded-xl bg-primary px-4 py-3 text-sm font-bold text-white hover:bg-orange-600 disabled:opacity-50"
+          >
+            {downloading
+              ? <Loader2 className="h-4 w-4 animate-spin" />
+              : <Download className="h-4 w-4" />}
+            {downloading ? "Baixando…" : capturing ? "Gerando…" : previewWeb ? "Baixar Banner" : "Salve para gerar o banner"}
+          </button>
+
+          {previewWeb && (
+            <p className="mt-2 text-center text-[11px] text-gray-400">
+              Banner salvo no Storage · PNG de alta resolução
+            </p>
+          )}
+        </>
+      ) : (
+        <div className="flex aspect-[4/5] flex-col items-center justify-center gap-3 rounded-xl border-2 border-dashed border-gray-100 bg-gray-50">
+          <ImageDown className="h-10 w-10 text-gray-200" />
+          <p className="max-w-[180px] text-center text-sm text-gray-400">
+            Preencha o formulário e clique em <strong>Salvar</strong> para gerar o banner
+          </p>
+        </div>
+      )}
+    </div>
+  );
+}
 
 export function PalestrasManager() {
   return <HeroSlidesManager />;
