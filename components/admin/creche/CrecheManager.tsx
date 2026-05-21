@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import React, { useEffect, useState } from "react";
 import { createSupabaseBrowserClient } from "@/lib/supabase-browser";
-import { Printer, Search, X, UserRound } from "lucide-react";
+import { Printer, Search, X, UserRound, Pencil, Save, Loader2 } from "lucide-react";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 export type Aluno = {
@@ -49,15 +49,21 @@ export type Aluno = {
 };
 
 // ─── Constants ────────────────────────────────────────────────────────────────
-const SERIES = ["Maternal 1", "Maternal 2", "Pré Escola 1 A", "Pré Escola 1 B", "Pré Escola 2"];
+// Séries são carregadas dinamicamente do banco (alunos com status Matriculado)
 
 const STATUS_STYLE: Record<string, string> = {
-  Ativo:        "bg-emerald-100 text-emerald-700",
-  Inativo:      "bg-gray-100 text-gray-500",
-  Transferido:  "bg-yellow-100 text-yellow-700",
+  Matriculado: "bg-emerald-100 text-emerald-700",
+  Transferido: "bg-yellow-100 text-yellow-700",
+  Evadido:     "bg-red-100 text-red-700",
+  Concluído:   "bg-blue-100 text-blue-700",
+  Cancelado:   "bg-gray-100 text-gray-500",
 };
 
-const STATUS_OPTIONS = ["Ativo", "Inativo", "Transferido"];
+// Status que indicam aluno ATIVO (aparece na lista principal)
+const STATUS_ATIVO = "Matriculado";
+
+// Status de histórico (saída)
+const STATUS_HISTORICO = ["Transferido", "Evadido", "Concluído", "Cancelado"];
 
 function val(v: string | null | undefined) {
   return v && v.trim() ? v : "—";
@@ -280,76 +286,193 @@ function openPrintList(alunos: Aluno[], serie: string, filters: { anoLetivo: str
 }
 
 export function CrecheManager() {
-  const [activeSerie, setActiveSerie] = useState(SERIES[0]);
-  const [search, setSearch]           = useState("");
-  const [anoLetivo, setAnoLetivo]     = useState("");
-  const [status, setStatus]           = useState("");
-  const [alunos, setAlunos]           = useState<Aluno[]>([]);
-  const [loading, setLoading]         = useState(false);
-  const [error, setError]             = useState<string | null>(null);
+  const [series, setSeries]                 = useState<string[]>([]);
+  const [activeSerie, setActiveSerie]       = useState<string>("");
+  const [search, setSearch]                 = useState("");
+  const [anoLetivo, setAnoLetivo]           = useState("");
+  const [statusFiltro, setStatusFiltro]     = useState("");
+  const [mostrarHistorico, setMostrarHistorico] = useState(false);
+  const [alunos, setAlunos]                 = useState<Aluno[]>([]);
+  const [loading, setLoading]               = useState(false);
+  const [loadingSeries, setLoadingSeries]   = useState(true);
+  const [error, setError]                   = useState<string | null>(null);
 
-  // Fetch alunos when active serie changes
+  // ── Carrega as séries disponíveis no banco (alunos Matriculados) ──────────
   useEffect(() => {
-    if (!process.env.NEXT_PUBLIC_SUPABASE_URL) {
-      setError("Supabase não configurado.");
-      return;
-    }
+    if (!process.env.NEXT_PUBLIC_SUPABASE_URL) return;
+
+    const supabase = createSupabaseBrowserClient();
+    supabase
+      .from("alunos")
+      .select("serie")
+      .eq("status", STATUS_ATIVO)
+      .order("serie", { ascending: true })
+      .then(({ data }) => {
+        const distintas = Array.from(
+          new Set((data ?? []).map((r: { serie: string }) => r.serie).filter(Boolean))
+        ).sort() as string[];
+        setSeries(distintas);
+        if (distintas.length > 0) setActiveSerie(distintas[0]);
+        setLoadingSeries(false);
+      });
+  }, []);
+
+  // ── Fetch alunos quando série ativa ou modo histórico muda ───────────────
+  useEffect(() => {
+    if (!activeSerie || !process.env.NEXT_PUBLIC_SUPABASE_URL) return;
 
     setLoading(true);
     setError(null);
 
     const supabase = createSupabaseBrowserClient();
-    supabase
+    let query = supabase
       .from("alunos")
       .select("*")
       .eq("serie", activeSerie)
-      .order("nome_aluno", { ascending: true })
-      .then(({ data, error: err }) => {
-        setLoading(false);
-        if (err) {
-          setError("Tabela 'alunos' não encontrada. Execute a migration no Supabase.");
-          setAlunos([]);
-          return;
-        }
-        setAlunos((data ?? []) as Aluno[]);
-      });
-  }, [activeSerie]);
+      .order("nome_aluno", { ascending: true });
 
-  // Client-side filtering
+    // Modo padrão: apenas matriculados | Modo histórico: apenas saídas
+    if (!mostrarHistorico) {
+      query = query.eq("status", STATUS_ATIVO);
+    } else {
+      query = query.in("status", STATUS_HISTORICO);
+    }
+
+    query.then(({ data, error: err }) => {
+      setLoading(false);
+      if (err) {
+        setError("Tabela 'alunos' não encontrada. Execute a migration no Supabase.");
+        setAlunos([]);
+        return;
+      }
+      setAlunos((data ?? []) as Aluno[]);
+    });
+  }, [activeSerie, mostrarHistorico]);
+
+  // ── Estado do modal de edição ────────────────────────────────────────────
+  const [editingAluno, setEditingAluno] = useState<Aluno | null>(null);
+  const [editForm, setEditForm]         = useState<Partial<Aluno>>({});
+  const [saving, setSaving]             = useState(false);
+  const [saveError, setSaveError]       = useState<string | null>(null);
+
+  function openEdit(aluno: Aluno) {
+    setEditingAluno(aluno);
+    setEditForm({ ...aluno });
+    setSaveError(null);
+  }
+
+  function closeEdit() {
+    if (saving) return;
+    setEditingAluno(null);
+    setEditForm({});
+  }
+
+  // Campos que NÃO devem ser convertidos para uppercase
+  const SKIP_UPPER = new Set(["id", "foto_url", "possui_alergia", "necessidade_especial", "transferido", "created_at"]);
+
+  function setField(key: keyof Aluno, value: string | boolean | null) {
+    setEditForm((f) => ({ ...f, [key]: value }));
+  }
+
+  function setFieldUpper(key: keyof Aluno, value: string) {
+    setEditForm((f) => ({ ...f, [key]: value.toUpperCase() }));
+  }
+
+  async function handleSave() {
+    if (!editingAluno) return;
+    setSaving(true);
+    setSaveError(null);
+
+    // Aplica uppercase em todos os campos de texto
+    const payload: Partial<Aluno> = {};
+    for (const [k, v] of Object.entries(editForm)) {
+      if (SKIP_UPPER.has(k) || typeof v !== "string") {
+        (payload as Record<string, unknown>)[k] = v;
+      } else {
+        (payload as Record<string, unknown>)[k] = v.toUpperCase();
+      }
+    }
+
+    const supabase = createSupabaseBrowserClient();
+    const { error: err } = await supabase
+      .from("alunos")
+      .update(payload)
+      .eq("id", editingAluno.id);
+
+    setSaving(false);
+    if (err) {
+      setSaveError("Erro ao salvar: " + err.message);
+      return;
+    }
+
+    // Atualiza lista local
+    setAlunos((prev) =>
+      prev.map((a) => (a.id === editingAluno.id ? ({ ...a, ...payload } as Aluno) : a))
+    );
+    closeEdit();
+  }
+
+  // ── Client-side filtering ─────────────────────────────────────────────────
   const filtered = alunos.filter((a) => {
     const matchSearch = a.nome_aluno.toLowerCase().includes(search.toLowerCase());
     const matchAno    = anoLetivo ? a.ano_letivo === anoLetivo : true;
-    const matchStatus = status ? a.status === status : true;
+    const matchStatus = statusFiltro ? a.status === statusFiltro : true;
     return matchSearch && matchAno && matchStatus;
   });
 
   // Collect distinct anos for filter dropdown
   const anos = Array.from(new Set(alunos.map((a) => a.ano_letivo))).sort().reverse();
 
+  function resetFiltros() {
+    setSearch("");
+    setAnoLetivo("");
+    setStatusFiltro("");
+  }
+
   return (
     <div className="space-y-4">
 
       {/* ── Tab bar horizontal ──────────────────────────────────────────── */}
-      <div className="flex flex-wrap gap-2 border-b border-gray-200 pb-3">
-        {SERIES.map((serie) => (
-          <button
-            key={serie}
-            type="button"
-            onClick={() => {
-              setActiveSerie(serie);
-              setSearch("");
-              setAnoLetivo("");
-              setStatus("");
-            }}
-            className={`rounded-lg px-4 py-2 text-sm font-semibold transition-colors ${
-              activeSerie === serie
-                ? "bg-primary text-white shadow-sm"
-                : "bg-white text-gray-600 hover:bg-orange-50 hover:text-primary border border-gray-200"
-            }`}
-          >
-            {serie}
-          </button>
-        ))}
+      <div className="flex flex-wrap items-center gap-2 border-b border-gray-200 pb-3">
+        {loadingSeries ? (
+          <span className="text-sm text-gray-400 py-2">Carregando turmas...</span>
+        ) : series.length === 0 ? (
+          <span className="text-sm text-amber-600 py-2">Nenhuma turma com alunos matriculados encontrada.</span>
+        ) : (
+          series.map((serie) => (
+            <button
+              key={serie}
+              type="button"
+              onClick={() => {
+                setActiveSerie(serie);
+                resetFiltros();
+              }}
+              className={`rounded-lg px-4 py-2 text-sm font-semibold transition-colors ${
+                activeSerie === serie
+                  ? "bg-primary text-white shadow-sm"
+                  : "bg-white text-gray-600 hover:bg-orange-50 hover:text-primary border border-gray-200"
+              }`}
+            >
+              {serie}
+            </button>
+          ))
+        )}
+
+        {/* Toggle histórico */}
+        <button
+          type="button"
+          onClick={() => {
+            setMostrarHistorico((v) => !v);
+            resetFiltros();
+          }}
+          className={`ml-auto rounded-lg px-4 py-2 text-sm font-semibold border transition-colors ${
+            mostrarHistorico
+              ? "bg-yellow-100 text-yellow-800 border-yellow-300 hover:bg-yellow-200"
+              : "bg-white text-gray-500 border-gray-200 hover:bg-gray-50"
+          }`}
+        >
+          {mostrarHistorico ? "📋 Ver matriculados" : "🗂 Ver histórico"}
+        </button>
       </div>
 
       {/* ── Container da série ──────────────────────────────────────────── */}
@@ -370,20 +493,27 @@ export function CrecheManager() {
             ))}
           </select>
 
-          <select
-            value={status}
-            onChange={(e) => setStatus(e.target.value)}
-            className="rounded-lg border border-gray-200 px-3 py-2 text-sm outline-none focus:border-primary"
-          >
-            <option value="">Todos os status</option>
-            {STATUS_OPTIONS.map((option) => (
-              <option key={option} value={option}>{option}</option>
-            ))}
-          </select>
+          {/* Filtro de status — só aparece no modo histórico */}
+          {mostrarHistorico && (
+            <select
+              value={statusFiltro}
+              onChange={(e) => setStatusFiltro(e.target.value)}
+              className="rounded-lg border border-yellow-300 bg-yellow-50 px-3 py-2 text-sm outline-none focus:border-yellow-500"
+            >
+              <option value="">Todos os históricos</option>
+              {STATUS_HISTORICO.map((s) => (
+                <option key={s} value={s}>{s}</option>
+              ))}
+            </select>
+          )}
 
           {/* Série (informativo, não filtra — a tab já filtra) */}
-          <span className="rounded-lg border border-orange-200 bg-orange-50 px-3 py-2 text-sm font-semibold text-primary">
-            {activeSerie}
+          <span className={`rounded-lg border px-3 py-2 text-sm font-semibold ${
+            mostrarHistorico
+              ? "border-yellow-300 bg-yellow-50 text-yellow-800"
+              : "border-orange-200 bg-orange-50 text-primary"
+          }`}>
+            {activeSerie} {mostrarHistorico ? "· Histórico" : "· Matriculados"}
           </span>
 
           {/* Pesquisa */}
@@ -414,7 +544,7 @@ export function CrecheManager() {
 
           <button
             type="button"
-            onClick={() => openPrintList(filtered, activeSerie, { anoLetivo, status })}
+            onClick={() => openPrintList(filtered, activeSerie, { anoLetivo, status: statusFiltro })}
             disabled={loading}
             className="inline-flex items-center gap-2 rounded-lg bg-primary px-3 py-2 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-orange-700 disabled:cursor-not-allowed disabled:opacity-60"
           >
@@ -447,7 +577,7 @@ export function CrecheManager() {
                   <th className="px-4 py-3">Série</th>
                   <th className="px-4 py-3">Status</th>
                   <th className="px-4 py-3">Ano Letivo</th>
-                  <th className="px-4 py-3 text-center">Ficha</th>
+                  <th className="px-4 py-3 text-center">Ações</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-50">
@@ -465,14 +595,24 @@ export function CrecheManager() {
                     </td>
                     <td className="px-4 py-3 text-gray-600">{aluno.ano_letivo}</td>
                     <td className="px-4 py-3 text-center">
-                      <button
-                        type="button"
-                        title="Ver e imprimir ficha"
-                        onClick={() => openPrint(aluno)}
-                        className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-gray-400 hover:bg-orange-50 hover:text-primary"
-                      >
-                        <Printer className="h-4 w-4" />
-                      </button>
+                      <div className="flex items-center justify-center gap-3">
+                        <button
+                          type="button"
+                          title="Editar dados do aluno"
+                          onClick={() => openEdit(aluno)}
+                          className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-gray-400 hover:bg-violet-50 hover:text-violet-600"
+                        >
+                          <Pencil className="h-4 w-4" />
+                        </button>
+                        <button
+                          type="button"
+                          title="Ver e imprimir ficha"
+                          onClick={() => openPrint(aluno)}
+                          className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-gray-400 hover:bg-orange-50 hover:text-primary"
+                        >
+                          <Printer className="h-4 w-4" />
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -481,6 +621,316 @@ export function CrecheManager() {
           )}
         </div>
       </div>
+
+      {/* ── Modal de edição ──────────────────────────────────────────────── */}
+      {editingAluno && (
+        <div className="fixed inset-0 z-50 flex items-start justify-end bg-black/40 backdrop-blur-sm">
+          <div className="relative flex h-full w-full max-w-2xl flex-col bg-white shadow-2xl">
+
+            {/* Header do drawer */}
+            <div className="flex items-center gap-3 border-b border-gray-100 px-6 py-4">
+              <Pencil className="h-5 w-5 text-violet-500" />
+              <div className="flex-1 min-w-0">
+                <p className="text-xs text-gray-400 font-medium uppercase tracking-wide">Editando</p>
+                <p className="text-sm font-bold text-gray-900 truncate">{editingAluno.nome_aluno}</p>
+              </div>
+              <button
+                type="button"
+                onClick={closeEdit}
+                disabled={saving}
+                className="rounded-lg p-2 text-gray-400 hover:bg-gray-100 hover:text-gray-700 disabled:opacity-50"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            {/* Corpo com scroll */}
+            <div className="flex-1 overflow-y-auto px-6 py-5 space-y-6">
+
+              {/* ── Identificação ── */}
+              <Section title="Identificação">
+                <Row2>
+                  <Field label="Nome do Aluno *">
+                    <TInput value={editForm.nome_aluno ?? ""} onChange={(v) => setField("nome_aluno", v)} onBlur={(v) => setFieldUpper("nome_aluno", v)} />
+                  </Field>
+                  <Field label="Matrícula">
+                    <TInput value={editForm.matricula_nr ?? ""} onChange={(v) => setField("matricula_nr", v)} onBlur={(v) => setFieldUpper("matricula_nr", v)} />
+                  </Field>
+                </Row2>
+                <Row3>
+                  <Field label="Data de Nascimento">
+                    <TInput value={editForm.data_nascimento ?? ""} onChange={(v) => setField("data_nascimento", v)} />
+                  </Field>
+                  <Field label="Sexo">
+                    <select value={editForm.sexo ?? ""} onChange={(e) => setField("sexo", e.target.value)} className={selectCls}>
+                      <option value="">—</option>
+                      <option value="MASCULINO">MASCULINO</option>
+                      <option value="FEMININO">FEMININO</option>
+                    </select>
+                  </Field>
+                  <Field label="Grupo Étnico">
+                    <TInput value={editForm.grupo_etnico ?? ""} onChange={(v) => setField("grupo_etnico", v)} onBlur={(v) => setFieldUpper("grupo_etnico", v)} />
+                  </Field>
+                </Row3>
+                <Row2>
+                  <Field label="Nº NIS">
+                    <TInput value={editForm.numero_nis ?? ""} onChange={(v) => setField("numero_nis", v)} />
+                  </Field>
+                  <Field label="URL da Foto">
+                    <TInput value={editForm.foto_url ?? ""} onChange={(v) => setField("foto_url", v)} placeholder="https://..." />
+                  </Field>
+                </Row2>
+              </Section>
+
+              {/* ── Registro Civil ── */}
+              <Section title="Registro Civil">
+                <Row3>
+                  <Field label="Assento Nº">
+                    <TInput value={editForm.assento_nr ?? ""} onChange={(v) => setField("assento_nr", v)} onBlur={(v) => setFieldUpper("assento_nr", v)} />
+                  </Field>
+                  <Field label="Data do Registro">
+                    <TInput value={editForm.data_registro_nascimento ?? ""} onChange={(v) => setField("data_registro_nascimento", v)} />
+                  </Field>
+                  <Field label="Cartório">
+                    <TInput value={editForm.cartorio_registro ?? ""} onChange={(v) => setField("cartorio_registro", v)} onBlur={(v) => setFieldUpper("cartorio_registro", v)} />
+                  </Field>
+                </Row3>
+                <Row3>
+                  <Field label="Cidade de Registro">
+                    <TInput value={editForm.cidade_registro_nascimento ?? ""} onChange={(v) => setField("cidade_registro_nascimento", v)} onBlur={(v) => setFieldUpper("cidade_registro_nascimento", v)} />
+                  </Field>
+                  <Field label="Estado">
+                    <TInput value={editForm.estado_registro ?? ""} onChange={(v) => setField("estado_registro", v)} onBlur={(v) => setFieldUpper("estado_registro", v)} />
+                  </Field>
+                  <Field label="Folha Nº">
+                    <TInput value={editForm.folha_registro_nr ?? ""} onChange={(v) => setField("folha_registro_nr", v)} onBlur={(v) => setFieldUpper("folha_registro_nr", v)} />
+                  </Field>
+                </Row3>
+                <Row2>
+                  <Field label="Livro Nº">
+                    <TInput value={editForm.nr_livro_registro_nasc ?? ""} onChange={(v) => setField("nr_livro_registro_nasc", v)} onBlur={(v) => setFieldUpper("nr_livro_registro_nasc", v)} />
+                  </Field>
+                </Row2>
+              </Section>
+
+              {/* ── Endereço ── */}
+              <Section title="Endereço">
+                <Row2>
+                  <Field label="Endereço">
+                    <TInput value={editForm.endereco_aluno ?? ""} onChange={(v) => setField("endereco_aluno", v)} onBlur={(v) => setFieldUpper("endereco_aluno", v)} />
+                  </Field>
+                  <Field label="Bairro">
+                    <TInput value={editForm.bairro_aluno ?? ""} onChange={(v) => setField("bairro_aluno", v)} onBlur={(v) => setFieldUpper("bairro_aluno", v)} />
+                  </Field>
+                </Row2>
+                <Row2>
+                  <Field label="Cidade">
+                    <TInput value={editForm.cidade_aluno ?? ""} onChange={(v) => setField("cidade_aluno", v)} onBlur={(v) => setFieldUpper("cidade_aluno", v)} />
+                  </Field>
+                  <Field label="Estado">
+                    <TInput value={editForm.estado_residencia ?? ""} onChange={(v) => setField("estado_residencia", v)} onBlur={(v) => setFieldUpper("estado_residencia", v)} />
+                  </Field>
+                </Row2>
+              </Section>
+
+              {/* ── Filiação — Mãe ── */}
+              <Section title="Filiação — Mãe">
+                <Row2>
+                  <Field label="Nome da Mãe">
+                    <TInput value={editForm.nome_mae ?? ""} onChange={(v) => setField("nome_mae", v)} onBlur={(v) => setFieldUpper("nome_mae", v)} />
+                  </Field>
+                  <Field label="Profissão">
+                    <TInput value={editForm.profissao_mae ?? ""} onChange={(v) => setField("profissao_mae", v)} onBlur={(v) => setFieldUpper("profissao_mae", v)} />
+                  </Field>
+                </Row2>
+                <Row2>
+                  <Field label="CPF">
+                    <TInput value={editForm.cpf_mae ?? ""} onChange={(v) => setField("cpf_mae", v)} />
+                  </Field>
+                  <Field label="RG">
+                    <TInput value={editForm.rg_mae ?? ""} onChange={(v) => setField("rg_mae", v)} />
+                  </Field>
+                </Row2>
+              </Section>
+
+              {/* ── Filiação — Pai ── */}
+              <Section title="Filiação — Pai">
+                <Row2>
+                  <Field label="Nome do Pai">
+                    <TInput value={editForm.nome_pai ?? ""} onChange={(v) => setField("nome_pai", v)} onBlur={(v) => setFieldUpper("nome_pai", v)} />
+                  </Field>
+                  <Field label="Profissão">
+                    <TInput value={editForm.profissao_pai ?? ""} onChange={(v) => setField("profissao_pai", v)} onBlur={(v) => setFieldUpper("profissao_pai", v)} />
+                  </Field>
+                </Row2>
+                <Row2>
+                  <Field label="CPF">
+                    <TInput value={editForm.cpf_pai ?? ""} onChange={(v) => setField("cpf_pai", v)} />
+                  </Field>
+                  <Field label="RG">
+                    <TInput value={editForm.rg_pai ?? ""} onChange={(v) => setField("rg_pai", v)} />
+                  </Field>
+                </Row2>
+              </Section>
+
+              {/* ── Responsável ── */}
+              <Section title="Responsável">
+                <Row2>
+                  <Field label="Nome do Responsável">
+                    <TInput value={editForm.nome_responsavel ?? ""} onChange={(v) => setField("nome_responsavel", v)} onBlur={(v) => setFieldUpper("nome_responsavel", v)} />
+                  </Field>
+                  <Field label="Telefone / Contato">
+                    <TInput value={editForm.fone_contato ?? ""} onChange={(v) => setField("fone_contato", v)} />
+                  </Field>
+                </Row2>
+              </Section>
+
+              {/* ── Saúde ── */}
+              <Section title="Saúde">
+                <div className="flex flex-col gap-3">
+                  <label className="flex items-center gap-3 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={editForm.possui_alergia ?? false}
+                      onChange={(e) => setField("possui_alergia", e.target.checked)}
+                      className="h-4 w-4 rounded border-gray-300 accent-violet-600"
+                    />
+                    <span className="text-sm font-medium text-gray-700">Possui alergia</span>
+                  </label>
+                  {editForm.possui_alergia && (
+                    <Field label="Qual alergia?">
+                      <TInput value={editForm.qual_alergia ?? ""} onChange={(v) => setField("qual_alergia", v)} onBlur={(v) => setFieldUpper("qual_alergia", v)} />
+                    </Field>
+                  )}
+                  <label className="flex items-center gap-3 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={editForm.necessidade_especial ?? false}
+                      onChange={(e) => setField("necessidade_especial", e.target.checked)}
+                      className="h-4 w-4 rounded border-gray-300 accent-violet-600"
+                    />
+                    <span className="text-sm font-medium text-gray-700">Necessidade especial</span>
+                  </label>
+                  {editForm.necessidade_especial && (
+                    <Field label="Descrição">
+                      <TInput value={editForm.necessidade_especial_text ?? ""} onChange={(v) => setField("necessidade_especial_text", v)} onBlur={(v) => setFieldUpper("necessidade_especial_text", v)} />
+                    </Field>
+                  )}
+                </div>
+              </Section>
+
+              {/* ── Informações Escolares ── */}
+              <Section title="Informações Escolares">
+                <Row3>
+                  <Field label="Série">
+                    <select value={editForm.serie ?? ""} onChange={(e) => setField("serie", e.target.value)} className={selectCls}>
+                      {series.map((s) => <option key={s} value={s}>{s}</option>)}
+                    </select>
+                  </Field>
+                  <Field label="Ano Letivo">
+                    <TInput value={editForm.ano_letivo ?? ""} onChange={(v) => setField("ano_letivo", v)} onBlur={(v) => setFieldUpper("ano_letivo", v)} />
+                  </Field>
+                  <Field label="Status">
+                    <select value={editForm.status ?? STATUS_ATIVO} onChange={(e) => setField("status", e.target.value)} className={selectCls}>
+                      <option value="Matriculado">Matriculado</option>
+                      {STATUS_HISTORICO.map((s) => <option key={s} value={s}>{s}</option>)}
+                    </select>
+                  </Field>
+                </Row3>
+                <Row3>
+                  <Field label="Horário">
+                    <TInput value={editForm.qual_horario ?? ""} onChange={(v) => setField("qual_horario", v)} onBlur={(v) => setFieldUpper("qual_horario", v)} />
+                  </Field>
+                  <Field label="Projeto">
+                    <TInput value={editForm.qual_projeto ?? ""} onChange={(v) => setField("qual_projeto", v)} onBlur={(v) => setFieldUpper("qual_projeto", v)} />
+                  </Field>
+                  <Field label="Tipo de Cadastro">
+                    <TInput value={editForm.tipo_cadastro ?? ""} onChange={(v) => setField("tipo_cadastro", v)} onBlur={(v) => setFieldUpper("tipo_cadastro", v)} />
+                  </Field>
+                </Row3>
+              </Section>
+
+            </div>
+
+            {/* Footer com ações */}
+            {saveError && (
+              <p className="px-6 py-2 text-xs text-red-600 bg-red-50 border-t border-red-100">{saveError}</p>
+            )}
+            <div className="flex items-center justify-end gap-3 border-t border-gray-100 px-6 py-4">
+              <button
+                type="button"
+                onClick={closeEdit}
+                disabled={saving}
+                className="rounded-lg border border-gray-200 px-4 py-2 text-sm font-semibold text-gray-600 hover:bg-gray-50 disabled:opacity-50"
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                onClick={handleSave}
+                disabled={saving}
+                className="inline-flex items-center gap-2 rounded-lg bg-violet-600 px-5 py-2 text-sm font-semibold text-white shadow-sm hover:bg-violet-700 disabled:opacity-60"
+              >
+                {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+                {saving ? "Salvando..." : "Salvar"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
+  );
+}
+
+// ── Componentes auxiliares do formulário ──────────────────────────────────────
+
+const selectCls = "w-full rounded-lg border border-gray-200 px-3 py-2 text-sm outline-none focus:border-violet-400 focus:ring-1 focus:ring-violet-100 bg-white";
+
+function Section({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <div>
+      <p className="mb-3 text-xs font-bold uppercase tracking-wider text-orange-500">{title}</p>
+      <div className="space-y-3">{children}</div>
+    </div>
+  );
+}
+
+function Row2({ children }: { children: React.ReactNode }) {
+  return <div className="grid grid-cols-2 gap-3">{children}</div>;
+}
+
+function Row3({ children }: { children: React.ReactNode }) {
+  return <div className="grid grid-cols-3 gap-3">{children}</div>;
+}
+
+function Field({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div className="flex flex-col gap-1">
+      <label className="text-[11px] font-semibold uppercase tracking-wide text-gray-400">{label}</label>
+      {children}
+    </div>
+  );
+}
+
+function TInput({
+  value,
+  onChange,
+  onBlur,
+  placeholder,
+}: {
+  value: string;
+  onChange: (v: string) => void;
+  onBlur?: (v: string) => void;
+  placeholder?: string;
+}) {
+  return (
+    <input
+      type="text"
+      value={value}
+      placeholder={placeholder}
+      onChange={(e) => onChange(e.target.value)}
+      onBlur={(e) => onBlur?.(e.target.value)}
+      className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm outline-none focus:border-violet-400 focus:ring-1 focus:ring-violet-100 uppercase placeholder:normal-case"
+    />
   );
 }
