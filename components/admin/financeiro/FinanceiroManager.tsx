@@ -6,6 +6,9 @@ import {
   TrendingUp, TrendingDown, Wallet, Plus, Pencil, Trash2,
   Search, X, Loader2, Save, ChevronDown, FileDown,
 } from "lucide-react";
+import * as XLSX from "xlsx";
+import { jsPDF } from "jspdf";
+import autoTable from "jspdf-autotable";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 type Receita = {
@@ -57,6 +60,44 @@ function exportarCSV(dados: Record<string, unknown>[], nome: string) {
   a.download = `${nome}.csv`;
   a.click();
   URL.revokeObjectURL(a.href);
+}
+
+// ─── Exportar XLSX ────────────────────────────────────────────────────────────
+function exportarXLSX(dados: Record<string, unknown>[], nome: string) {
+  if (!dados.length) return;
+  const ws = XLSX.utils.json_to_sheet(dados);
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, nome.slice(0, 31));
+  XLSX.writeFile(wb, `${nome}.xlsx`);
+}
+
+// ─── Exportar PDF ─────────────────────────────────────────────────────────────
+function exportarPDF(dados: Record<string, unknown>[], nome: string, total: number) {
+  if (!dados.length) return;
+  const doc  = new jsPDF({ orientation: "landscape" });
+  const cols = Object.keys(dados[0]);
+
+  doc.setFontSize(14);
+  doc.setFont("helvetica", "bold");
+  doc.text(nome.toUpperCase(), 14, 14);
+
+  doc.setFontSize(10);
+  doc.setFont("helvetica", "normal");
+  doc.text(
+    `Total: R$ ${total.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}   |   ${dados.length} registro(s)   |   Gerado em ${new Date().toLocaleDateString("pt-BR")}`,
+    14, 21
+  );
+
+  autoTable(doc, {
+    head: [cols],
+    body: dados.map((r) => cols.map((c) => String(r[c] ?? ""))),
+    startY: 27,
+    styles:     { fontSize: 9, cellPadding: 3 },
+    headStyles: { fillColor: [99, 102, 241], textColor: 255, fontStyle: "bold" },
+    alternateRowStyles: { fillColor: [248, 248, 255] },
+  });
+
+  doc.save(`${nome}.pdf`);
 }
 
 // ─── Componente principal ─────────────────────────────────────────────────────
@@ -398,9 +439,17 @@ export function FinanceiroManager() {
                 </tr>
               )}
               onNovo={abrirNovaReceita}
-              onExportar={() => exportarCSV(
-                recFiltradas.map((r) => ({ Data: fmtData(r.data), Origem: r.origem, Obs: r.obs, Conta: r.conta, Valor: r.valor })),
+              onExportarCSV={() => exportarCSV(
+                recFiltradas.map((r) => ({ Data: fmtData(r.data), Origem: r.origem, Obs: r.obs ?? "", Conta: r.conta ?? "", Valor: r.valor })),
                 "receitas"
+              )}
+              onExportarXLSX={() => exportarXLSX(
+                recFiltradas.map((r) => ({ Data: fmtData(r.data), Origem: r.origem, Obs: r.obs ?? "", Conta: r.conta ?? "", Valor: r.valor })),
+                "receitas"
+              )}
+              onExportarPDF={() => exportarPDF(
+                recFiltradas.map((r) => ({ Data: fmtData(r.data), Origem: r.origem, Obs: r.obs ?? "", Conta: r.conta ?? "", Valor: r.valor })),
+                "Receitas", totalReceitas
               )}
             />
           )}
@@ -433,9 +482,17 @@ export function FinanceiroManager() {
                 </tr>
               )}
               onNovo={abrirNovoPagamento}
-              onExportar={() => exportarCSV(
-                pagFiltrados.map((p) => ({ Data: fmtData(p.data), Beneficiario: p.beneficiario, Obs: p.obs, Conta: p.conta, Valor: p.valor })),
+              onExportarCSV={() => exportarCSV(
+                pagFiltrados.map((p) => ({ Data: fmtData(p.data), Beneficiario: p.beneficiario, Obs: p.obs ?? "", Conta: p.conta ?? "", Valor: p.valor })),
                 "pagamentos"
+              )}
+              onExportarXLSX={() => exportarXLSX(
+                pagFiltrados.map((p) => ({ Data: fmtData(p.data), Beneficiario: p.beneficiario, Obs: p.obs ?? "", Conta: p.conta ?? "", Valor: p.valor })),
+                "pagamentos"
+              )}
+              onExportarPDF={() => exportarPDF(
+                pagFiltrados.map((p) => ({ Data: fmtData(p.data), Beneficiario: p.beneficiario, Obs: p.obs ?? "", Conta: p.conta ?? "", Valor: p.valor })),
+                "Pagamentos", totalPagamentos
               )}
             />
           )}
@@ -555,7 +612,7 @@ function TabelaResumida({ titulo, cor, linhas }: {
         <div className="divide-y divide-gray-50">
           {linhas.map((l, i) => (
             <div key={i} className="flex items-center gap-3 px-5 py-3">
-              <span className="shrink-0 text-xs text-gray-400 font-mono w-16">{l.data}</span>
+              <span className="shrink-0 text-[13px] text-gray-600 font-mono w-16">{l.data}</span>
               <div className="flex-1 min-w-0">
                 <p className="truncate text-sm font-semibold text-gray-800">{l.desc}</p>
                 {l.obs && <p className="truncate text-xs text-gray-400">{l.obs}</p>}
@@ -571,11 +628,14 @@ function TabelaResumida({ titulo, cor, linhas }: {
   );
 }
 
-function TabelaCompleta<T>({ titulo, cor, total, linhas, colunas, renderLinha, onNovo, onExportar }: {
+function TabelaCompleta<T>({ titulo, cor, total, linhas, colunas, renderLinha, onNovo, onExportarCSV, onExportarXLSX, onExportarPDF }: {
   titulo: string; cor: "emerald" | "red"; total: number;
   linhas: T[]; colunas: string[];
   renderLinha: (item: T) => React.ReactNode;
-  onNovo: () => void; onExportar: () => void;
+  onNovo: () => void;
+  onExportarCSV: () => void;
+  onExportarXLSX: () => void;
+  onExportarPDF: () => void;
 }) {
   const corBotao = cor === "emerald"
     ? "bg-emerald-600 hover:bg-emerald-700"
@@ -592,12 +652,11 @@ function TabelaCompleta<T>({ titulo, cor, total, linhas, colunas, renderLinha, o
         <span className={`ml-auto text-sm font-extrabold ${corTotal}`}>
           Total: {moeda(total)}
         </span>
-        <button
-          onClick={onExportar}
-          className="inline-flex items-center gap-1.5 rounded-lg border border-gray-200 px-3 py-2 text-sm font-semibold text-gray-600 hover:bg-gray-50"
-        >
-          <FileDown className="h-4 w-4" /> CSV
-        </button>
+        <ExportDropdown
+          onCSV={onExportarCSV}
+          onXLSX={onExportarXLSX}
+          onPDF={onExportarPDF}
+        />
         <button
           onClick={onNovo}
           className={`inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-bold text-white ${corBotao}`}
@@ -649,6 +708,48 @@ function CampoModal({ label, children, className }: { label: string; children: R
     <div className={`flex flex-col gap-1 ${className ?? ""}`}>
       <label className="text-[11px] font-semibold uppercase tracking-wide text-gray-400">{label}</label>
       {children}
+    </div>
+  );
+}
+
+function ExportDropdown({ onCSV, onXLSX, onPDF }: { onCSV: () => void; onXLSX: () => void; onPDF: () => void }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <div className="relative">
+      <button
+        onClick={() => setOpen((v) => !v)}
+        className="inline-flex items-center gap-1.5 rounded-lg border border-gray-200 px-3 py-2 text-sm font-semibold text-gray-600 hover:bg-gray-50"
+      >
+        <FileDown className="h-4 w-4" />
+        Exportar
+        <ChevronDown className={`h-3 w-3 transition-transform ${open ? "rotate-180" : ""}`} />
+      </button>
+
+      {open && (
+        <>
+          <div className="fixed inset-0 z-10" onClick={() => setOpen(false)} />
+          <div className="absolute right-0 top-full z-20 mt-1 min-w-[150px] rounded-xl border border-gray-200 bg-white py-1 shadow-lg">
+            <button
+              onClick={() => { onCSV(); setOpen(false); }}
+              className="flex w-full items-center gap-2 px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50"
+            >
+              <FileDown className="h-4 w-4 text-gray-400" /> CSV
+            </button>
+            <button
+              onClick={() => { onXLSX(); setOpen(false); }}
+              className="flex w-full items-center gap-2 px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50"
+            >
+              <FileDown className="h-4 w-4 text-emerald-500" /> Excel (XLSX)
+            </button>
+            <button
+              onClick={() => { onPDF(); setOpen(false); }}
+              className="flex w-full items-center gap-2 px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50"
+            >
+              <FileDown className="h-4 w-4 text-red-400" /> PDF
+            </button>
+          </div>
+        </>
+      )}
     </div>
   );
 }
