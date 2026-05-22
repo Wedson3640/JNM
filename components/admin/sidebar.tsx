@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Baby, BookOpen, HandHeart, LayoutDashboard, Mic2, Settings, Video, X } from "lucide-react";
+import { Baby, BookOpen, HandHeart, LayoutDashboard, Mic2, Settings, Video, Wallet, X } from "lucide-react";
 import { createSupabaseBrowserClient } from "@/lib/supabase-browser";
 import { getAdminProfile, getAllowedAdminNavItems, normalizeAdminProfile, type AdminProfile } from "@/lib/admin-access";
 
@@ -17,7 +17,8 @@ const iconsByHref = {
   "/admin/palestras": Mic2,
   "/admin/servicos": HandHeart,
   "/admin/livraria": BookOpen,
-  "/admin/videos":   Video,
+  "/admin/videos":      Video,
+  "/admin/financeiro":  Wallet,
 };
 
 function SidebarContent({

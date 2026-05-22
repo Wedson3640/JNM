@@ -1,4 +1,4 @@
-export type AdminProfile = "admin" | "creche" | "palestras" | "livraria" | "servicos" | "videos";
+export type AdminProfile = "admin" | "creche" | "palestras" | "livraria" | "servicos" | "videos" | "financeiro";
 
 export type AdminNavItem = {
   label: string;
@@ -12,7 +12,8 @@ export const adminProfileOptions: { value: AdminProfile; label: string }[] = [
   { value: "palestras",label: "Config. Palestra" },
   { value: "livraria", label: "Livraria" },
   { value: "servicos", label: "Serv. Social" },
-  { value: "videos",   label: "Vídeos" },
+  { value: "videos",      label: "Vídeos" },
+  { value: "financeiro",  label: "Financeiro" },
 ];
 
 export const adminNavAccess: AdminNavItem[] = [
@@ -22,7 +23,8 @@ export const adminNavAccess: AdminNavItem[] = [
   { label: "Config. Palestra", href: "/admin/palestras", profile: "palestras" },
   { label: "Serv. Sociais", href: "/admin/servicos", profile: "servicos" },
   { label: "Livraria", href: "/admin/livraria", profile: "livraria" },
-  { label: "Vídeos",   href: "/admin/videos",   profile: "videos" },
+  { label: "Vídeos",      href: "/admin/videos",      profile: "videos" },
+  { label: "Financeiro",  href: "/admin/financeiro",  profile: "financeiro" },
 ];
 
 const profileAliases: Record<string, AdminProfile> = {
@@ -40,6 +42,7 @@ const profileAliases: Record<string, AdminProfile> = {
   "serv social": "servicos",
   "serv. social": "servicos",
   "servicos sociais": "servicos",
+  financeiro: "financeiro",
 };
 
 function normalizeText(value: string) {
