@@ -4,7 +4,7 @@ import React, { useCallback, useEffect, useState } from "react";
 import { createSupabaseBrowserClient } from "@/lib/supabase-browser";
 import {
   TrendingUp, TrendingDown, Wallet, Plus, Pencil, Trash2,
-  Search, X, Loader2, Save, ChevronDown, FileDown,
+  Search, X, Loader2, Save, FileDown, AlertTriangle,
 } from "lucide-react";
 import * as XLSX from "xlsx";
 import { jsPDF } from "jspdf";
@@ -119,6 +119,9 @@ export function FinanceiroManager() {
   const [formP,     setFormP]     = useState({ ...VAZIO_P });
   const [saving,    setSaving]    = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
+
+  // Confirmação de exclusão
+  const [confirmDelete, setConfirmDelete] = useState<{ tipo: "receita" | "pagamento"; id: string } | null>(null);
 
   // ── Carregar ───────────────────────────────────────────────────────────────
   const carregar = useCallback(async () => {
@@ -289,14 +292,18 @@ export function FinanceiroManager() {
   }
 
   // ── Excluir ────────────────────────────────────────────────────────────────
-  async function excluirReceita(id: string) {
-    if (!confirm("Excluir esta receita?")) return;
-    await createSupabaseBrowserClient().from("financeiro_receitas").delete().eq("id", id);
-    carregar();
-  }
-  async function excluirPagamento(id: string) {
-    if (!confirm("Excluir este pagamento?")) return;
-    await createSupabaseBrowserClient().from("financeiro_pagamentos").delete().eq("id", id);
+  function excluirReceita(id: string)   { setConfirmDelete({ tipo: "receita",   id }); }
+  function excluirPagamento(id: string) { setConfirmDelete({ tipo: "pagamento", id }); }
+
+  async function confirmarExclusao() {
+    if (!confirmDelete) return;
+    const sb = createSupabaseBrowserClient();
+    if (confirmDelete.tipo === "receita") {
+      await sb.from("financeiro_receitas").delete().eq("id", confirmDelete.id);
+    } else {
+      await sb.from("financeiro_pagamentos").delete().eq("id", confirmDelete.id);
+    }
+    setConfirmDelete(null);
     carregar();
   }
 
@@ -431,7 +438,7 @@ export function FinanceiroManager() {
                     <td className="px-4 py-3 text-sm text-gray-500">{r.conta ?? "—"}</td>
                     <td className="px-4 py-3 text-sm font-bold text-emerald-600 text-right">{moeda(r.valor)}</td>
                     <td className="px-4 py-3 text-center">
-                      <div className="flex items-center justify-center gap-2">
+                      <div className="flex items-center justify-center gap-4">
                         <button onClick={() => abrirEditarReceita(r)} className="rounded-lg p-1.5 text-gray-400 hover:bg-violet-50 hover:text-violet-600"><Pencil className="h-4 w-4" /></button>
                         <button onClick={() => excluirReceita(r.id)}  className="rounded-lg p-1.5 text-gray-400 hover:bg-red-50 hover:text-red-500"><Trash2 className="h-4 w-4" /></button>
                       </div>
@@ -466,7 +473,7 @@ export function FinanceiroManager() {
                     <td className="px-4 py-3 text-sm text-gray-500">{p.conta ?? "—"}</td>
                     <td className="px-4 py-3 text-sm font-bold text-red-500 text-right">{moeda(p.valor)}</td>
                     <td className="px-4 py-3 text-center">
-                      <div className="flex items-center justify-center gap-2">
+                      <div className="flex items-center justify-center gap-4">
                         <button onClick={() => abrirEditarPagamento(p)} className="rounded-lg p-1.5 text-gray-400 hover:bg-violet-50 hover:text-violet-600"><Pencil className="h-4 w-4" /></button>
                         <button onClick={() => excluirPagamento(p.id)}  className="rounded-lg p-1.5 text-gray-400 hover:bg-red-50 hover:text-red-500"><Trash2 className="h-4 w-4" /></button>
                       </div>
@@ -580,6 +587,15 @@ export function FinanceiroManager() {
             </button>
           </div>
         </Modal>
+      )}
+
+      {/* ── Modal Confirmação Exclusão ── */}
+      {confirmDelete && (
+        <ConfirmacaoExclusao
+          tipo={confirmDelete.tipo}
+          onCancelar={() => setConfirmDelete(null)}
+          onConfirmar={confirmarExclusao}
+        />
       )}
     </div>
   );
@@ -810,6 +826,48 @@ function RelatorioModal({ titulo, dados, total, cor, onFechar }: {
   );
 }
 
+// ─── Confirmação de Exclusão ──────────────────────────────────────────────────
+function ConfirmacaoExclusao({ tipo, onCancelar, onConfirmar }: {
+  tipo: "receita" | "pagamento";
+  onCancelar: () => void;
+  onConfirmar: () => void;
+}) {
+  return (
+    <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+      <div className="w-full max-w-sm rounded-2xl bg-white shadow-2xl overflow-hidden">
+        {/* Ícone */}
+        <div className="flex flex-col items-center px-6 pt-8 pb-5">
+          <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-red-100">
+            <AlertTriangle className="h-7 w-7 text-red-500" />
+          </div>
+          <h3 className="text-center text-lg font-bold text-gray-900">
+            Excluir {tipo === "receita" ? "receita" : "pagamento"}?
+          </h3>
+          <p className="mt-2 text-center text-sm text-gray-500 leading-relaxed">
+            Deseja realmente excluir este registro?<br />
+            <span className="font-semibold text-red-500">Esta ação não pode ser desfeita.</span>
+          </p>
+        </div>
+        {/* Botões */}
+        <div className="flex gap-3 border-t border-gray-100 px-6 py-4">
+          <button
+            onClick={onCancelar}
+            className="flex-1 rounded-lg border border-gray-200 py-2.5 text-sm font-semibold text-gray-600 hover:bg-gray-50 transition-colors"
+          >
+            Cancelar
+          </button>
+          <button
+            onClick={onConfirmar}
+            className="flex-1 rounded-lg bg-red-500 py-2.5 text-sm font-bold text-white hover:bg-red-600 transition-colors"
+          >
+            Sim, excluir
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function Modal({ titulo, onFechar, children }: { titulo: string; onFechar: () => void; children: React.ReactNode }) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
@@ -833,27 +891,3 @@ function CampoModal({ label, children, className }: { label: string; children: R
   );
 }
 
-function ExportDropdown({ onCSV, onXLSX, onPDF }: { onCSV: () => void; onXLSX: () => void; onPDF: () => void }) {
-  const [open, setOpen] = useState(false);
-  return (
-    <div className="relative">
-      <button
-        onClick={() => setOpen((v) => !v)}
-        className="inline-flex items-center gap-1.5 rounded-lg border border-gray-200 px-3 py-2 text-sm font-semibold text-gray-600 hover:bg-gray-50"
-      >
-        <FileDown className="h-4 w-4" /> Exportar
-        <ChevronDown className={`h-3 w-3 transition-transform ${open ? "rotate-180" : ""}`} />
-      </button>
-      {open && (
-        <>
-          <div className="fixed inset-0 z-10" onClick={() => setOpen(false)} />
-          <div className="absolute right-0 top-full z-20 mt-1 min-w-[150px] rounded-xl border border-gray-200 bg-white py-1 shadow-lg">
-            <button onClick={() => { onCSV();  setOpen(false); }} className="flex w-full items-center gap-2 px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50"><FileDown className="h-4 w-4 text-gray-400" /> CSV</button>
-            <button onClick={() => { onXLSX(); setOpen(false); }} className="flex w-full items-center gap-2 px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50"><FileDown className="h-4 w-4 text-emerald-500" /> Excel (XLSX)</button>
-            <button onClick={() => { onPDF();  setOpen(false); }} className="flex w-full items-center gap-2 px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50"><FileDown className="h-4 w-4 text-red-400" /> PDF</button>
-          </div>
-        </>
-      )}
-    </div>
-  );
-}
