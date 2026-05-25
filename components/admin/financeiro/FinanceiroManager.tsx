@@ -74,27 +74,59 @@ function exportarXLSX(dados: Record<string, unknown>[], nome: string) {
 }
 
 // ─── Exportar PDF ─────────────────────────────────────────────────────────────
-function exportarPDF(dados: Record<string, unknown>[], nome: string, total: number) {
+function exportarPDF(dados: Record<string, unknown>[], nome: string, total: number, periodo?: string) {
   if (!dados.length) return;
-  const doc  = new jsPDF({ orientation: "landscape" });
-  const cols = Object.keys(dados[0]);
-  doc.setFontSize(14);
-  doc.setFont("helvetica", "bold");
-  doc.text(nome.toUpperCase(), 14, 14);
+  const doc   = new jsPDF({ orientation: "landscape" });
+  const cols  = Object.keys(dados[0]);
+  const pageW = doc.internal.pageSize.getWidth();
+  let y = 10;
+
+  // ── Cabeçalho institucional ──────────────────────────────────────────────
   doc.setFontSize(10);
+  doc.setFont("helvetica", "bold");
+  doc.text("SOCIEDADE ESPÍRITA JOÃO NUNES MAIA", pageW / 2, y, { align: "center" }); y += 5;
+  doc.setFontSize(8.5);
+  doc.text("Creche Fernando Miramez - Sociedade Civil Sem Fins Lucrativos", pageW / 2, y, { align: "center" }); y += 4;
   doc.setFont("helvetica", "normal");
+  doc.setFontSize(7);
+  doc.text("Qd: 145 B-03 Lotes do 06 a 13 Parque Pioneiro, Vila São Francisco, Km-07  ·  CEP: 64.032-100  ·  Teresina - Piauí", pageW / 2, y, { align: "center" }); y += 4;
+  doc.text("Entidade de Utilidade Pública  ·  Lei Municipal nº 2.524 de 21/05/97  ·  Lei Estadual nº 4.907 de 24/04/97", pageW / 2, y, { align: "center" }); y += 4;
+  doc.text("CNPJ: 01.461.832/0001-78  ·  CMAS - Inscrição nº 54  ·  Conselho Municipal de Educação de Teresina - Inscrição nº 067/2014", pageW / 2, y, { align: "center" }); y += 4;
+
+  doc.setDrawColor(80, 80, 80);
+  doc.setLineWidth(0.5);
+  doc.line(14, y, pageW - 14, y); y += 6;
+
+  // ── Título e período ─────────────────────────────────────────────────────
+  doc.setFontSize(11);
+  doc.setFont("helvetica", "bold");
+  doc.text(nome.toUpperCase(), 14, y); y += 5;
+
+  doc.setFontSize(8);
+  doc.setFont("helvetica", "normal");
+  if (periodo) { doc.text(`Período: ${periodo}`, 14, y); y += 4; }
   doc.text(
-    `Total: R$ ${total.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}  |  ${dados.length} registro(s)  |  ${new Date().toLocaleDateString("pt-BR")}`,
-    14, 21
-  );
+    `${dados.length} registro(s)  ·  Total: ${total.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}  ·  Emitido em: ${new Date().toLocaleDateString("pt-BR")}`,
+    14, y
+  ); y += 5;
+
+  // ── Tabela ───────────────────────────────────────────────────────────────
   autoTable(doc, {
     head: [cols],
     body: dados.map((r) => cols.map((c) => String(r[c] ?? ""))),
-    startY: 27,
-    styles:     { fontSize: 9, cellPadding: 3 },
-    headStyles: { fillColor: [99, 102, 241], textColor: 255, fontStyle: "bold" },
-    alternateRowStyles: { fillColor: [248, 248, 255] },
+    startY: y,
+    styles:              { fontSize: 8, cellPadding: 2.5 },
+    headStyles:          { fillColor: [99, 102, 241], textColor: 255, fontStyle: "bold" },
+    alternateRowStyles:  { fillColor: [248, 248, 255] },
+    didDrawPage: (data) => {
+      const pageH = doc.internal.pageSize.getHeight();
+      doc.setFontSize(6.5);
+      doc.setTextColor(160);
+      doc.text(`Página ${data.pageNumber}`, pageW - 14, pageH - 6, { align: "right" });
+      doc.setTextColor(0);
+    },
   });
+
   doc.save(`${nome}.pdf`);
 }
 
@@ -139,6 +171,14 @@ export function FinanceiroManager() {
   useEffect(() => { carregar(); }, [carregar]);
 
   // ── Filtros ────────────────────────────────────────────────────────────────
+  // Período em texto para o relatório
+  const periodoTexto = (() => {
+    if (dataInicio && dataFim) return `${fmtData(dataInicio)} à ${fmtData(dataFim)}`;
+    if (dataInicio) return `A partir de ${fmtData(dataInicio)}`;
+    if (dataFim)    return `Até ${fmtData(dataFim)}`;
+    return undefined;
+  })();
+
   // Base: data + busca (sem filtro de setor — usado nos cards)
   const recBase = receitas.filter((r) => {
     const mb = busca ? r.origem.toLowerCase().includes(busca.toLowerCase()) || (r.obs ?? "").toLowerCase().includes(busca.toLowerCase()) : true;
@@ -427,7 +467,7 @@ export function FinanceiroManager() {
           {aba === "receitas" && (
             <div className="space-y-4">
               <TabelaCompleta
-                titulo="Receitas" subtitulo={setorFiltro ? nomeSetor(setorFiltro) : undefined} cor="emerald" total={totalReceitas} linhas={recFiltradas}
+                titulo="Receitas" subtitulo={setorFiltro ? nomeSetor(setorFiltro) : undefined} cor="emerald" total={totalReceitas} linhas={recFiltradas} periodo={periodoTexto}
                 colunas={["Data", "Origem", "CPF/CNPJ", "Observação", "Setor", "Valor"]}
                 renderLinha={(r: Receita) => (
                   <tr key={r.id} className="hover:bg-gray-50">
@@ -462,7 +502,7 @@ export function FinanceiroManager() {
           {aba === "pagamentos" && (
             <div className="space-y-4">
               <TabelaCompleta
-                titulo="Pagamentos" subtitulo={setorFiltro ? nomeSetor(setorFiltro) : undefined} cor="red" total={totalPagamentos} linhas={pagFiltrados}
+                titulo="Pagamentos" subtitulo={setorFiltro ? nomeSetor(setorFiltro) : undefined} cor="red" total={totalPagamentos} linhas={pagFiltrados} periodo={periodoTexto}
                 colunas={["Data", "Beneficiário", "CPF/CNPJ", "Observação", "Setor", "Valor"]}
                 renderLinha={(p: Pagamento) => (
                   <tr key={p.id} className="hover:bg-gray-50">
@@ -653,12 +693,13 @@ function TabelaResumida({ titulo, cor, linhas }: {
   );
 }
 
-function TabelaCompleta<T>({ titulo, subtitulo, cor, total, linhas, colunas, renderLinha, onNovo, dadosExport }: {
+function TabelaCompleta<T>({ titulo, subtitulo, cor, total, linhas, colunas, renderLinha, onNovo, dadosExport, periodo }: {
   titulo: string; subtitulo?: string; cor: "emerald" | "red"; total: number;
   linhas: T[]; colunas: string[];
   renderLinha: (item: T) => React.ReactNode;
   onNovo: () => void;
   dadosExport: Record<string, unknown>[];
+  periodo?: string;
 }) {
   const [showRelatorio, setShowRelatorio] = useState(false);
   const corBotao = cor === "emerald" ? "bg-emerald-600 hover:bg-emerald-700" : "bg-red-500 hover:bg-red-600";
@@ -707,6 +748,7 @@ function TabelaCompleta<T>({ titulo, subtitulo, cor, total, linhas, colunas, ren
         dados={dadosExport}
         total={total}
         cor={cor}
+        periodo={periodo}
         onFechar={() => setShowRelatorio(false)}
       />
     )}
@@ -714,88 +756,133 @@ function TabelaCompleta<T>({ titulo, subtitulo, cor, total, linhas, colunas, ren
   );
 }
 
-// ─── Tela de Relatório ────────────────────────────────────────────────────────
-function RelatorioModal({ titulo, dados, total, cor, onFechar }: {
+// ─── Tela de Relatório (preview A4) ──────────────────────────────────────────
+function RelatorioModal({ titulo, dados, total, cor, onFechar, periodo }: {
   titulo: string;
   dados: Record<string, unknown>[];
   total: number;
   cor: "emerald" | "red";
   onFechar: () => void;
+  periodo?: string;
 }) {
-  const cols    = dados.length > 0 ? Object.keys(dados[0]) : [];
-  const nome    = titulo.toLowerCase();
-  const corFaixaHeader = cor === "emerald" ? "bg-emerald-600" : "bg-red-500";
-  const corValor       = cor === "emerald" ? "text-emerald-700" : "text-red-600";
-  const corBotaoPDF    = cor === "emerald" ? "bg-emerald-600 hover:bg-emerald-700" : "bg-red-500 hover:bg-red-600";
+  const cols        = dados.length > 0 ? Object.keys(dados[0]) : [];
+  const nome        = titulo;
+  const corValor    = cor === "emerald" ? "text-emerald-700" : "text-red-600";
+  const corBotaoPDF = cor === "emerald" ? "bg-emerald-600 hover:bg-emerald-700" : "bg-red-500 hover:bg-red-600";
+  const corBarraTit = cor === "emerald" ? "border-emerald-600" : "border-red-500";
+  const corTitTxt   = cor === "emerald" ? "text-emerald-700" : "text-red-600";
 
   return (
-    <div className="fixed inset-0 z-[100] flex flex-col bg-gray-100">
-      {/* ── Cabeçalho ── */}
-      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-gray-200 bg-white px-6 py-4 shadow-sm">
-        <div>
-          <h2 className="text-lg font-extrabold text-gray-900">{titulo}</h2>
-          <p className="text-sm text-gray-500">
-            {dados.length} registro{dados.length !== 1 ? "s" : ""} · Total: {moeda(total)} · {new Date().toLocaleDateString("pt-BR")}
-          </p>
+    <div className="fixed inset-0 z-[100] flex flex-col bg-gray-300">
+
+      {/* ── Barra de ferramentas ── */}
+      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-gray-300 bg-white px-5 py-2.5 shadow-sm">
+        <div className="flex items-center gap-3">
+          <span className="text-sm font-bold text-gray-800">{titulo}</span>
+          {periodo && <span className="rounded-full bg-gray-100 px-2.5 py-0.5 text-xs text-gray-500">{periodo}</span>}
         </div>
         <div className="flex items-center gap-2">
           <button
             onClick={() => exportarCSV(dados, nome)}
-            className="inline-flex items-center gap-1.5 rounded-lg border border-gray-200 px-3 py-2 text-sm font-semibold text-gray-600 hover:bg-gray-50"
+            className="inline-flex items-center gap-1.5 rounded-lg border border-gray-200 px-3 py-1.5 text-xs font-semibold text-gray-600 hover:bg-gray-50"
           >
-            <FileDown className="h-4 w-4 text-gray-400" /> CSV
+            <FileDown className="h-3.5 w-3.5 text-gray-400" /> CSV
           </button>
           <button
             onClick={() => exportarXLSX(dados, nome)}
-            className="inline-flex items-center gap-1.5 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm font-semibold text-emerald-700 hover:bg-emerald-100"
+            className="inline-flex items-center gap-1.5 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-xs font-semibold text-emerald-700 hover:bg-emerald-100"
           >
-            <FileDown className="h-4 w-4" /> Excel
+            <FileDown className="h-3.5 w-3.5" /> Excel
           </button>
           <button
-            onClick={() => exportarPDF(dados, titulo, total)}
-            className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-bold text-white ${corBotaoPDF}`}
+            onClick={() => exportarPDF(dados, titulo, total, periodo)}
+            className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-bold text-white ${corBotaoPDF}`}
           >
-            <FileDown className="h-4 w-4" /> PDF
+            <FileDown className="h-3.5 w-3.5" /> PDF
           </button>
-          <button onClick={onFechar} className="ml-1 rounded-lg p-2 text-gray-400 hover:bg-gray-100 hover:text-gray-700">
+          <button onClick={onFechar} className="ml-2 rounded-lg p-1.5 text-gray-400 hover:bg-gray-100 hover:text-gray-700">
             <X className="h-5 w-5" />
           </button>
         </div>
       </div>
 
-      {/* ── Conteúdo ── */}
-      <div className="flex-1 overflow-auto p-6">
+      {/* ── Área de scroll (fundo = área fora do papel) ── */}
+      <div className="flex-1 overflow-auto px-8 py-8">
         {dados.length === 0 ? (
           <div className="flex h-full items-center justify-center text-gray-400">
             <p className="text-sm">Nenhum registro para exibir.</p>
           </div>
         ) : (
-          <div className="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm">
-            {/* Faixa de título */}
-            <div className={`${corFaixaHeader} px-6 py-4 text-white`}>
-              <h3 className="text-base font-extrabold tracking-wide">{titulo.toUpperCase()}</h3>
-              <p className="text-sm opacity-80">Total: {moeda(total)} · {dados.length} registro{dados.length !== 1 ? "s" : ""}</p>
+          /* Folha A4 */
+          <div className="mx-auto w-full max-w-[794px] min-h-[1123px] bg-white shadow-2xl px-10 py-10 flex flex-col">
+
+            {/* ═══ CABEÇALHO INSTITUCIONAL ═══ */}
+            <div className="flex items-start gap-4 border-b-2 border-gray-700 pb-3 mb-5">
+              {/* Logo */}
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src="/images/logo%20JNM%20horizontal.png"
+                alt="JNM"
+                className="h-14 w-auto object-contain shrink-0"
+              />
+
+              {/* Texto institucional */}
+              <div className="flex-1 leading-snug">
+                <p className="text-[11px] font-black text-gray-900 uppercase tracking-wide">
+                  Sociedade Espírita João Nunes Maia
+                </p>
+                <p className="text-[10px] font-bold text-gray-800">
+                  Creche Fernando Miramez - Sociedade Civil Sem Fins Lucrativos
+                </p>
+                <p className="mt-0.5 text-[8.5px] text-gray-500">
+                  Qd: 145 B-03 Lotes do 06 a 13 Parque Pioneiro, Vila São Francisco, Km-07 · CEP: 64.032-100 · Teresina - Piauí
+                </p>
+                <p className="text-[8.5px] text-gray-500">
+                  Entidade de Utilidade Pública · Lei Municipal nº 2.524 de 21/05/97 · Lei Estadual nº 4.907 de 24/04/97
+                </p>
+                <p className="text-[8.5px] text-gray-500">
+                  CNPJ: 01.461.832/0001-78 · Conselho Municipal de Assistência Social - CMAS - Inscrição nº 54
+                </p>
+                <p className="text-[8.5px] text-gray-500">
+                  Conselho Municipal de Educação de Teresina - Inscrição nº 067/2014
+                </p>
+              </div>
+
+              {/* Página / data */}
+              <div className="shrink-0 text-right">
+                <p className="text-[8px] text-gray-400">Pág. 1</p>
+                <p className="text-[8px] text-gray-400">{new Date().toLocaleDateString("pt-BR")}</p>
+              </div>
             </div>
 
-            {/* Tabela */}
-            <table className="w-full text-sm">
+            {/* ═══ IDENTIFICAÇÃO DO RELATÓRIO ═══ */}
+            <div className={`mb-5 border-l-4 pl-3 ${corBarraTit}`}>
+              <h2 className={`text-sm font-extrabold uppercase tracking-wide ${corTitTxt}`}>{titulo}</h2>
+              {periodo && (
+                <p className="text-[10px] text-gray-500 mt-0.5">Período: {periodo}</p>
+              )}
+              <p className="text-[10px] text-gray-400">
+                {dados.length} registro{dados.length !== 1 ? "s" : ""} · Total: {moeda(total)} · Emitido em: {new Date().toLocaleDateString("pt-BR")}
+              </p>
+            </div>
+
+            {/* ═══ TABELA ═══ */}
+            <table className="w-full text-[11px] border-collapse">
               <thead>
-                <tr className="border-b border-gray-200 bg-gray-50 text-xs font-bold uppercase tracking-wide text-gray-500">
+                <tr className="border-b-2 border-gray-700 text-[9px] font-black uppercase tracking-wide text-gray-600">
                   {cols.map((c) => (
-                    <th key={c} className={`px-5 py-3 text-left ${c === "Valor" ? "text-right" : ""}`}>{c}</th>
+                    <th key={c} className={`py-2 pr-3 text-left first:pl-0 ${c === "Valor" ? "text-right" : ""}`}>{c}</th>
                   ))}
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-100">
+              <tbody>
                 {dados.map((row, i) => (
-                  <tr key={i} className={i % 2 === 0 ? "bg-white" : "bg-gray-50/60"}>
+                  <tr key={i} className={`border-b border-gray-100 ${i % 2 === 1 ? "bg-gray-50/70" : "bg-white"}`}>
                     {cols.map((c) => (
                       <td
                         key={c}
-                        className={`px-5 py-3 ${
-                          c === "Valor"
-                            ? `text-right font-bold ${corValor}`
-                            : "text-gray-700"
+                        className={`py-1.5 pr-3 first:pl-0 ${
+                          c === "Valor" ? `text-right font-bold ${corValor}` : "text-gray-700"
                         }`}
                       >
                         {String(row[c] ?? "—")}
@@ -805,20 +892,25 @@ function RelatorioModal({ titulo, dados, total, cor, onFechar }: {
                 ))}
               </tbody>
               <tfoot>
-                <tr className="border-t-2 border-gray-200 bg-gray-50">
+                <tr className="border-t-2 border-gray-700">
                   {cols.map((c, i) => (
                     <td
                       key={c}
-                      className={`px-5 py-3 text-sm font-extrabold ${
-                        c === "Valor" ? `text-right ${corValor}` : i === 0 ? "text-gray-600" : ""
+                      className={`py-2 pr-3 first:pl-0 text-xs font-extrabold ${
+                        c === "Valor" ? `text-right ${corValor}` : i === 0 ? "text-gray-800" : ""
                       }`}
                     >
-                      {c === "Valor" ? moeda(total) : i === 0 ? "TOTAL" : ""}
+                      {c === "Valor" ? moeda(total) : i === 0 ? "TOTAL GERAL" : ""}
                     </td>
                   ))}
                 </tr>
               </tfoot>
             </table>
+
+            {/* Rodapé da folha */}
+            <div className="mt-auto pt-10 border-t border-gray-200 text-center text-[8px] text-gray-300">
+              Documento gerado em {new Date().toLocaleString("pt-BR")} · Sistema de Gestão JNM
+            </div>
           </div>
         )}
       </div>
