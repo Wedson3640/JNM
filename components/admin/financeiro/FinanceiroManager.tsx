@@ -73,55 +73,84 @@ function exportarXLSX(dados: Record<string, unknown>[], nome: string) {
   XLSX.writeFile(wb, `${nome}.xlsx`);
 }
 
+// ─── Helper: carrega imagem como base64 via canvas ────────────────────────────
+async function loadImgBase64(src: string): Promise<string | null> {
+  return new Promise((resolve) => {
+    const img = new window.Image();
+    img.crossOrigin = "anonymous";
+    img.onload = () => {
+      try {
+        const c = document.createElement("canvas");
+        c.width = img.naturalWidth; c.height = img.naturalHeight;
+        c.getContext("2d")?.drawImage(img, 0, 0);
+        resolve(c.toDataURL("image/png"));
+      } catch { resolve(null); }
+    };
+    img.onerror = () => resolve(null);
+    img.src = src;
+  });
+}
+
 // ─── Exportar PDF ─────────────────────────────────────────────────────────────
-function exportarPDF(dados: Record<string, unknown>[], nome: string, total: number, periodo?: string) {
+async function exportarPDF(dados: Record<string, unknown>[], nome: string, total: number, periodo?: string) {
   if (!dados.length) return;
   const doc   = new jsPDF({ orientation: "landscape" });
   const cols  = Object.keys(dados[0]);
-  const pageW = doc.internal.pageSize.getWidth();
+  const pageW = doc.internal.pageSize.getWidth(); // 297 mm
   let y = 10;
 
-  // ── Cabeçalho institucional ──────────────────────────────────────────────
-  doc.setFontSize(10);
-  doc.setFont("helvetica", "bold");
-  doc.text("SOCIEDADE ESPÍRITA JOÃO NUNES MAIA", pageW / 2, y, { align: "center" }); y += 5;
-  doc.setFontSize(8.5);
-  doc.text("Creche Fernando Miramez - Sociedade Civil Sem Fins Lucrativos", pageW / 2, y, { align: "center" }); y += 4;
-  doc.setFont("helvetica", "normal");
-  doc.setFontSize(7);
-  doc.text("Qd: 145 B-03 Lotes do 06 a 13 Parque Pioneiro, Vila São Francisco, Km-07  ·  CEP: 64.032-100  ·  Teresina - Piauí", pageW / 2, y, { align: "center" }); y += 4;
-  doc.text("Entidade de Utilidade Pública  ·  Lei Municipal nº 2.524 de 21/05/97  ·  Lei Estadual nº 4.907 de 24/04/97", pageW / 2, y, { align: "center" }); y += 4;
-  doc.text("CNPJ: 01.461.832/0001-78  ·  CMAS - Inscrição nº 54  ·  Conselho Municipal de Educação de Teresina - Inscrição nº 067/2014", pageW / 2, y, { align: "center" }); y += 4;
+  // ── Logo ─────────────────────────────────────────────────────────────────
+  const logoW = 40; const logoH = 25;
+  const logo  = await loadImgBase64("/images/logo%20JNM%20horizontal.png");
+  if (logo) { doc.addImage(logo, "PNG", 14, y, logoW, logoH); }
+  const textX = logo ? 14 + logoW + 5 : 14;
 
-  doc.setDrawColor(80, 80, 80);
-  doc.setLineWidth(0.5);
+  // ── Cabeçalho institucional (à direita da logo) ───────────────────────────
+  doc.setFontSize(10); doc.setFont("helvetica", "bold");
+  doc.text("SOCIEDADE ESPÍRITA JOÃO NUNES MAIA", textX, y + 6);
+
+  doc.setFontSize(8.5);
+  doc.text("Creche Fernando Miramez - Sociedade Civil Sem Fins Lucrativos", textX, y + 11);
+
+  doc.setFont("helvetica", "normal"); doc.setFontSize(7);
+  doc.text("Qd: 145 B-03 Lotes do 06 a 13 Parque Pioneiro, Vila São Francisco, Km-07  ·  CEP: 64.032-100  ·  Teresina - Piauí", textX, y + 15);
+  doc.text("Entidade de Utilidade Pública  ·  Lei Municipal nº 2.524 de 21/05/97  ·  Lei Estadual nº 4.907 de 24/04/97", textX, y + 19);
+  doc.text("CNPJ: 01.461.832/0001-78  ·  CMAS - Inscrição nº 54  ·  CME Teresina - Inscrição nº 067/2014", textX, y + 23);
+
+  // ── Pág. + data (canto superior direito) ─────────────────────────────────
+  doc.setFontSize(6.5); doc.setTextColor(150);
+  doc.text("Pág. 1", pageW - 14, y + 6, { align: "right" });
+  doc.text(new Date().toLocaleDateString("pt-BR"), pageW - 14, y + 10, { align: "right" });
+  doc.setTextColor(0);
+
+  y += Math.max(logoH, 26) + 3;
+
+  // ── Linha separadora ──────────────────────────────────────────────────────
+  doc.setDrawColor(80, 80, 80); doc.setLineWidth(0.5);
   doc.line(14, y, pageW - 14, y); y += 6;
 
-  // ── Título e período ─────────────────────────────────────────────────────
-  doc.setFontSize(11);
-  doc.setFont("helvetica", "bold");
+  // ── Título e período ──────────────────────────────────────────────────────
+  doc.setFontSize(11); doc.setFont("helvetica", "bold");
   doc.text(nome.toUpperCase(), 14, y); y += 5;
 
-  doc.setFontSize(8);
-  doc.setFont("helvetica", "normal");
+  doc.setFontSize(8); doc.setFont("helvetica", "normal");
   if (periodo) { doc.text(`Período: ${periodo}`, 14, y); y += 4; }
   doc.text(
     `${dados.length} registro(s)  ·  Total: ${total.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}  ·  Emitido em: ${new Date().toLocaleDateString("pt-BR")}`,
     14, y
   ); y += 5;
 
-  // ── Tabela ───────────────────────────────────────────────────────────────
+  // ── Tabela ────────────────────────────────────────────────────────────────
   autoTable(doc, {
     head: [cols],
     body: dados.map((r) => cols.map((c) => String(r[c] ?? ""))),
     startY: y,
-    styles:              { fontSize: 8, cellPadding: 2.5 },
-    headStyles:          { fillColor: [99, 102, 241], textColor: 255, fontStyle: "bold" },
-    alternateRowStyles:  { fillColor: [248, 248, 255] },
+    styles:             { fontSize: 8, cellPadding: 2.5 },
+    headStyles:         { fillColor: [99, 102, 241], textColor: 255, fontStyle: "bold" },
+    alternateRowStyles: { fillColor: [248, 248, 255] },
     didDrawPage: (data) => {
       const pageH = doc.internal.pageSize.getHeight();
-      doc.setFontSize(6.5);
-      doc.setTextColor(160);
+      doc.setFontSize(6.5); doc.setTextColor(160);
       doc.text(`Página ${data.pageNumber}`, pageW - 14, pageH - 6, { align: "right" });
       doc.setTextColor(0);
     },
