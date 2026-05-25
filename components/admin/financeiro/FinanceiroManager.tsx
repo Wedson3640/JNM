@@ -73,8 +73,8 @@ function exportarXLSX(dados: Record<string, unknown>[], nome: string) {
   XLSX.writeFile(wb, `${nome}.xlsx`);
 }
 
-// ─── Helper: carrega imagem como base64 via canvas ────────────────────────────
-async function loadImgBase64(src: string): Promise<string | null> {
+// ─── Helper: carrega imagem como base64 + dimensões naturais ─────────────────
+async function loadImgBase64(src: string): Promise<{ data: string; w: number; h: number } | null> {
   return new Promise((resolve) => {
     const img = new window.Image();
     img.crossOrigin = "anonymous";
@@ -83,7 +83,7 @@ async function loadImgBase64(src: string): Promise<string | null> {
         const c = document.createElement("canvas");
         c.width = img.naturalWidth; c.height = img.naturalHeight;
         c.getContext("2d")?.drawImage(img, 0, 0);
-        resolve(c.toDataURL("image/png"));
+        resolve({ data: c.toDataURL("image/png"), w: img.naturalWidth, h: img.naturalHeight });
       } catch { resolve(null); }
     };
     img.onerror = () => resolve(null);
@@ -99,10 +99,11 @@ async function exportarPDF(dados: Record<string, unknown>[], nome: string, total
   const pageW = doc.internal.pageSize.getWidth(); // 297 mm
   let y = 10;
 
-  // ── Logo ─────────────────────────────────────────────────────────────────
-  const logoW = 40; const logoH = 25;
-  const logo  = await loadImgBase64("/images/logo%20JNM%20horizontal.png");
-  if (logo) { doc.addImage(logo, "PNG", 14, y, logoW, logoH); }
+  // ── Logo (aspect ratio preservado para não distorcer) ────────────────────
+  const logo  = await loadImgBase64("/images/logo%20JNM%20(1).png");
+  const logoH = 24; // altura fixa mm
+  const logoW = logo ? (logo.w / logo.h) * logoH : 0;
+  if (logo) { doc.addImage(logo.data, "PNG", 14, y, logoW, logoH); }
   const textX = logo ? 14 + logoW + 5 : 14;
 
   // ── Cabeçalho institucional (à direita da logo) ───────────────────────────
@@ -850,7 +851,7 @@ function RelatorioModal({ titulo, dados, total, cor, onFechar, periodo }: {
               {/* Logo */}
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
-                src="/images/logo%20JNM%20horizontal.png"
+                src="/images/logo%20JNM%20(1).png"
                 alt="JNM"
                 className="h-14 w-auto object-contain shrink-0"
               />
