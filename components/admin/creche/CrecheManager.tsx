@@ -368,7 +368,9 @@ export function CrecheManager() {
   }
 
   // Campos que NÃO devem ser convertidos para uppercase
-  const SKIP_UPPER = new Set(["id", "foto_url", "possui_alergia", "necessidade_especial", "transferido", "created_at"]);
+  // "status" tem constraint com valores exatos (Matriculado, Transferido…)
+  // "serie" vem do banco e deve ser preservada como está
+  const SKIP_UPPER = new Set(["id", "foto_url", "possui_alergia", "necessidade_especial", "transferido", "created_at", "status", "serie"]);
 
   function setField(key: keyof Aluno, value: string | boolean | null) {
     setEditForm((f) => ({ ...f, [key]: value }));
