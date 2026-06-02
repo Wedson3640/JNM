@@ -54,7 +54,7 @@ export type Aluno = {
 const STATUS_STYLE: Record<string, string> = {
   Matriculado: "bg-emerald-100 text-emerald-700",
   Transferido: "bg-yellow-100 text-yellow-700",
-  Evadido:     "bg-red-100 text-red-700",
+  Desistente:  "bg-red-100 text-red-700",
   Concluído:   "bg-blue-100 text-blue-700",
   Cancelado:   "bg-gray-100 text-gray-500",
 };
@@ -63,7 +63,7 @@ const STATUS_STYLE: Record<string, string> = {
 const STATUS_ATIVO = "Matriculado";
 
 // Status de histórico (saída)
-const STATUS_HISTORICO = ["Transferido", "Evadido", "Concluído", "Cancelado"];
+const STATUS_HISTORICO = ["Transferido", "Desistente", "Concluído", "Cancelado"];
 
 function val(v: string | null | undefined) {
   return v && v.trim() ? v : "—";

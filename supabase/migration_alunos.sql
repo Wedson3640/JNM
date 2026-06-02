@@ -54,7 +54,7 @@ CREATE TABLE IF NOT EXISTS public.alunos (
   serie                       text        NOT NULL,   -- 'Maternal 1', 'Maternal 2', etc.
   ano_letivo                  text        NOT NULL,
   status                      text        NOT NULL DEFAULT 'Matriculado',
-  -- Valores: 'Matriculado' | 'Transferido' | 'Evadido' | 'Concluído' | 'Cancelado'
+  -- Valores: 'Matriculado' | 'Transferido' | 'Desistente' | 'Concluído' | 'Cancelado'
   -- Apenas 'Matriculado' aparece na lista ativa; os demais ficam como histórico
   qual_horario                text,
   qual_projeto                text,

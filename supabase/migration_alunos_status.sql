@@ -35,7 +35,7 @@ ALTER TABLE public.alunos
 -- Adiciona constraint com valores válidos
 ALTER TABLE public.alunos
   ADD CONSTRAINT alunos_status_check
-  CHECK (status IN ('Matriculado', 'Transferido', 'Evadido', 'Concluído', 'Cancelado'));
+  CHECK (status IN ('Matriculado', 'Transferido', 'Desistente', 'Concluído', 'Cancelado'));
 
 -- Verificação final
 SELECT status, COUNT(*) AS total FROM public.alunos GROUP BY status;
