@@ -1,8 +1,8 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { createSupabaseBrowserClient } from "@/lib/supabase-browser";
-import { Printer, Search, X, UserRound, Pencil, Save, Loader2 } from "lucide-react";
+import { Printer, Search, X, UserRound, Pencil, Save, Loader2, UserPlus, Upload } from "lucide-react";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 export type Aluno = {
@@ -355,6 +355,16 @@ export function CrecheManager() {
   const [saving, setSaving]             = useState(false);
   const [saveError, setSaveError]       = useState<string | null>(null);
 
+  // ── Estado do modal de cadastro ───────────────────────────────────────────
+  const [creatingAluno, setCreatingAluno] = useState(false);
+  const [createForm, setCreateForm]       = useState<Partial<Aluno>>({});
+  const [creating, setCreating]           = useState(false);
+  const [createError, setCreateError]     = useState<string | null>(null);
+  const [photoFile, setPhotoFile]         = useState<File | null>(null);
+  const [photoPreview, setPhotoPreview]   = useState<string | null>(null);
+  const [uploadingPhoto, setUploadingPhoto] = useState(false);
+  const photoInputRef                     = useRef<HTMLInputElement>(null);
+
   function openEdit(aluno: Aluno) {
     setEditingAluno(aluno);
     setEditForm({ ...aluno });
@@ -365,6 +375,127 @@ export function CrecheManager() {
     if (saving) return;
     setEditingAluno(null);
     setEditForm({});
+  }
+
+  function openCreate() {
+    const anoAtual = String(new Date().getFullYear());
+    setCreateForm({
+      serie: activeSerie,
+      status: STATUS_ATIVO,
+      ano_letivo: anoAtual,
+      possui_alergia: false,
+      necessidade_especial: false,
+      transferido: false,
+    });
+    setPhotoFile(null);
+    setPhotoPreview(null);
+    setCreateError(null);
+    setCreatingAluno(true);
+  }
+
+  function closeCreate() {
+    if (creating) return;
+    setCreatingAluno(false);
+    setCreateForm({});
+    setPhotoFile(null);
+    setPhotoPreview(null);
+  }
+
+  function handlePhotoChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setPhotoFile(file);
+    const reader = new FileReader();
+    reader.onloadend = () => setPhotoPreview(reader.result as string);
+    reader.readAsDataURL(file);
+  }
+
+  function setCreateField(key: keyof Aluno, value: string | boolean | null) {
+    setCreateForm((f) => ({ ...f, [key]: value }));
+  }
+
+  function setCreateFieldUpper(key: keyof Aluno, value: string) {
+    setCreateForm((f) => ({ ...f, [key]: value.toUpperCase() }));
+  }
+
+  async function handleCreate() {
+    if (!createForm.nome_aluno?.trim()) {
+      setCreateError("O nome do aluno é obrigatório.");
+      return;
+    }
+    setCreating(true);
+    setCreateError(null);
+
+    const supabase = createSupabaseBrowserClient();
+
+    // Faz upload da foto se houver arquivo selecionado
+    let fotoUrl: string | null = createForm.foto_url ?? null;
+    if (photoFile) {
+      setUploadingPhoto(true);
+      try {
+        const ext  = photoFile.name.split(".").pop() ?? "jpg";
+        const path = `alunos/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
+        const { error: uploadErr } = await supabase.storage
+          .from("creche-miranez")
+          .upload(path, photoFile, { upsert: false });
+
+        if (!uploadErr) {
+          const { data: urlData } = supabase.storage
+            .from("creche-miranez")
+            .getPublicUrl(path);
+          fotoUrl = urlData.publicUrl;
+        } else {
+          // Upload falhou mas segue sem foto, apenas avisa
+          console.warn("Upload de foto falhou:", uploadErr.message);
+        }
+      } catch {
+        console.warn("Erro inesperado no upload de foto.");
+      } finally {
+        setUploadingPhoto(false);
+      }
+    }
+
+    // Monta payload com uppercase nos campos de texto
+    const raw: Partial<Aluno> = { ...createForm, foto_url: fotoUrl };
+    const payload: Partial<Aluno> = {};
+    for (const [k, v] of Object.entries(raw)) {
+      if (SKIP_UPPER.has(k) || typeof v !== "string") {
+        (payload as Record<string, unknown>)[k] = v;
+      } else {
+        (payload as Record<string, unknown>)[k] = v.toUpperCase();
+      }
+    }
+
+    const { data: inserted, error: err } = await supabase
+      .from("alunos")
+      .insert(payload)
+      .select()
+      .single();
+
+    setCreating(false);
+    if (err) {
+      setCreateError("Erro ao cadastrar: " + err.message);
+      return;
+    }
+
+    // Adiciona à lista local se for da série/status atual visível
+    if (inserted) {
+      const novoAluno = inserted as Aluno;
+      const visivel =
+        novoAluno.serie === activeSerie &&
+        (!mostrarHistorico
+          ? novoAluno.status === STATUS_ATIVO
+          : STATUS_HISTORICO.includes(novoAluno.status));
+      if (visivel) {
+        setAlunos((prev) =>
+          [...prev, novoAluno].sort((a, b) =>
+            a.nome_aluno.localeCompare(b.nome_aluno, "pt-BR")
+          )
+        );
+      }
+    }
+
+    closeCreate();
   }
 
   // Campos que NÃO devem ser convertidos para uppercase
@@ -460,21 +591,33 @@ export function CrecheManager() {
           ))
         )}
 
-        {/* Toggle histórico */}
-        <button
-          type="button"
-          onClick={() => {
-            setMostrarHistorico((v) => !v);
-            resetFiltros();
-          }}
-          className={`ml-auto rounded-lg px-4 py-2 text-sm font-semibold border transition-colors ${
-            mostrarHistorico
-              ? "bg-yellow-100 text-yellow-800 border-yellow-300 hover:bg-yellow-200"
-              : "bg-white text-gray-500 border-gray-200 hover:bg-gray-50"
-          }`}
-        >
-          {mostrarHistorico ? "📋 Ver matriculados" : "🗂 Ver histórico"}
-        </button>
+        {/* Ações direita: cadastrar + histórico */}
+        <div className="ml-auto flex items-center gap-2">
+          <button
+            type="button"
+            onClick={openCreate}
+            className="inline-flex items-center gap-2 rounded-lg bg-emerald-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-emerald-700"
+          >
+            <UserPlus className="h-4 w-4" />
+            Cadastrar Novo Aluno
+          </button>
+
+          {/* Toggle histórico */}
+          <button
+            type="button"
+            onClick={() => {
+              setMostrarHistorico((v) => !v);
+              resetFiltros();
+            }}
+            className={`rounded-lg px-4 py-2 text-sm font-semibold border transition-colors ${
+              mostrarHistorico
+                ? "bg-yellow-100 text-yellow-800 border-yellow-300 hover:bg-yellow-200"
+                : "bg-white text-gray-500 border-gray-200 hover:bg-gray-50"
+            }`}
+          >
+            {mostrarHistorico ? "📋 Ver matriculados" : "🗂 Ver histórico"}
+          </button>
+        </div>
       </div>
 
       {/* ── Container da série ──────────────────────────────────────────── */}
@@ -623,6 +766,320 @@ export function CrecheManager() {
           )}
         </div>
       </div>
+
+      {/* ── Modal de cadastro ────────────────────────────────────────────── */}
+      {creatingAluno && (
+        <div className="fixed inset-0 z-50 flex items-start justify-end bg-black/40 backdrop-blur-sm">
+          <div className="relative flex h-full w-full max-w-2xl flex-col bg-white shadow-2xl">
+
+            {/* Header */}
+            <div className="flex items-center gap-3 border-b border-gray-100 px-6 py-4">
+              <UserPlus className="h-5 w-5 text-emerald-500" />
+              <div className="flex-1 min-w-0">
+                <p className="text-xs text-gray-400 font-medium uppercase tracking-wide">Novo Cadastro</p>
+                <p className="text-sm font-bold text-gray-900">Cadastrar Novo Aluno</p>
+              </div>
+              <button
+                type="button"
+                onClick={closeCreate}
+                disabled={creating}
+                className="rounded-lg p-2 text-gray-400 hover:bg-gray-100 hover:text-gray-700 disabled:opacity-50"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            {/* Corpo */}
+            <div className="flex-1 overflow-y-auto px-6 py-5 space-y-6">
+
+              {/* ── Foto ── */}
+              <Section title="Foto do Aluno">
+                <div className="flex items-start gap-5">
+                  {/* Preview */}
+                  <div className="relative shrink-0">
+                    {photoPreview ? (
+                      <img
+                        src={photoPreview}
+                        alt="Preview da foto"
+                        className="h-32 w-28 rounded-xl object-cover object-top border border-gray-200 shadow-sm"
+                      />
+                    ) : (
+                      <div className="flex h-32 w-28 items-center justify-center rounded-xl border-2 border-dashed border-gray-200 bg-gray-50">
+                        <UserRound className="h-10 w-10 text-gray-300" />
+                      </div>
+                    )}
+                    {photoPreview && (
+                      <button
+                        type="button"
+                        onClick={() => { setPhotoFile(null); setPhotoPreview(null); if (photoInputRef.current) photoInputRef.current.value = ""; }}
+                        className="absolute -top-2 -right-2 rounded-full bg-white border border-gray-200 p-0.5 text-gray-400 hover:text-red-500 shadow-sm"
+                      >
+                        <X className="h-3.5 w-3.5" />
+                      </button>
+                    )}
+                  </div>
+                  {/* Botões de upload */}
+                  <div className="flex flex-col gap-3 pt-1">
+                    <input
+                      ref={photoInputRef}
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={handlePhotoChange}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => photoInputRef.current?.click()}
+                      className="inline-flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-4 py-2 text-sm font-semibold text-gray-600 hover:bg-gray-50 hover:border-gray-300 transition-colors"
+                    >
+                      <Upload className="h-4 w-4" />
+                      {photoPreview ? "Trocar foto" : "Selecionar foto"}
+                    </button>
+                    <p className="text-xs text-gray-400 leading-relaxed">
+                      JPG, PNG ou WEBP.<br />A foto será enviada ao salvar.
+                    </p>
+                    {/* Ou URL manual */}
+                    <Field label="Ou cole a URL da foto">
+                      <TInput
+                        value={createForm.foto_url ?? ""}
+                        onChange={(v) => setCreateField("foto_url", v)}
+                        placeholder="https://..."
+                      />
+                    </Field>
+                  </div>
+                </div>
+              </Section>
+
+              {/* ── Identificação ── */}
+              <Section title="Identificação">
+                <Row2>
+                  <Field label="Nome do Aluno *">
+                    <TInput value={createForm.nome_aluno ?? ""} onChange={(v) => setCreateField("nome_aluno", v)} onBlur={(v) => setCreateFieldUpper("nome_aluno", v)} />
+                  </Field>
+                  <Field label="Matrícula">
+                    <TInput value={createForm.matricula_nr ?? ""} onChange={(v) => setCreateField("matricula_nr", v)} onBlur={(v) => setCreateFieldUpper("matricula_nr", v)} />
+                  </Field>
+                </Row2>
+                <Row3>
+                  <Field label="Data de Nascimento">
+                    <TInput value={createForm.data_nascimento ?? ""} onChange={(v) => setCreateField("data_nascimento", v)} />
+                  </Field>
+                  <Field label="Sexo">
+                    <select value={createForm.sexo ?? ""} onChange={(e) => setCreateField("sexo", e.target.value)} className={selectCls}>
+                      <option value="">—</option>
+                      <option value="MASCULINO">MASCULINO</option>
+                      <option value="FEMININO">FEMININO</option>
+                    </select>
+                  </Field>
+                  <Field label="Grupo Étnico">
+                    <TInput value={createForm.grupo_etnico ?? ""} onChange={(v) => setCreateField("grupo_etnico", v)} onBlur={(v) => setCreateFieldUpper("grupo_etnico", v)} />
+                  </Field>
+                </Row3>
+                <Row2>
+                  <Field label="Nº NIS">
+                    <TInput value={createForm.numero_nis ?? ""} onChange={(v) => setCreateField("numero_nis", v)} />
+                  </Field>
+                </Row2>
+              </Section>
+
+              {/* ── Registro Civil ── */}
+              <Section title="Registro Civil">
+                <Row3>
+                  <Field label="Assento Nº">
+                    <TInput value={createForm.assento_nr ?? ""} onChange={(v) => setCreateField("assento_nr", v)} onBlur={(v) => setCreateFieldUpper("assento_nr", v)} />
+                  </Field>
+                  <Field label="Data do Registro">
+                    <TInput value={createForm.data_registro_nascimento ?? ""} onChange={(v) => setCreateField("data_registro_nascimento", v)} />
+                  </Field>
+                  <Field label="Cartório">
+                    <TInput value={createForm.cartorio_registro ?? ""} onChange={(v) => setCreateField("cartorio_registro", v)} onBlur={(v) => setCreateFieldUpper("cartorio_registro", v)} />
+                  </Field>
+                </Row3>
+                <Row3>
+                  <Field label="Cidade de Registro">
+                    <TInput value={createForm.cidade_registro_nascimento ?? ""} onChange={(v) => setCreateField("cidade_registro_nascimento", v)} onBlur={(v) => setCreateFieldUpper("cidade_registro_nascimento", v)} />
+                  </Field>
+                  <Field label="Estado">
+                    <TInput value={createForm.estado_registro ?? ""} onChange={(v) => setCreateField("estado_registro", v)} onBlur={(v) => setCreateFieldUpper("estado_registro", v)} />
+                  </Field>
+                  <Field label="Folha Nº">
+                    <TInput value={createForm.folha_registro_nr ?? ""} onChange={(v) => setCreateField("folha_registro_nr", v)} onBlur={(v) => setCreateFieldUpper("folha_registro_nr", v)} />
+                  </Field>
+                </Row3>
+                <Row2>
+                  <Field label="Livro Nº">
+                    <TInput value={createForm.nr_livro_registro_nasc ?? ""} onChange={(v) => setCreateField("nr_livro_registro_nasc", v)} onBlur={(v) => setCreateFieldUpper("nr_livro_registro_nasc", v)} />
+                  </Field>
+                </Row2>
+              </Section>
+
+              {/* ── Endereço ── */}
+              <Section title="Endereço">
+                <Row2>
+                  <Field label="Endereço">
+                    <TInput value={createForm.endereco_aluno ?? ""} onChange={(v) => setCreateField("endereco_aluno", v)} onBlur={(v) => setCreateFieldUpper("endereco_aluno", v)} />
+                  </Field>
+                  <Field label="Bairro">
+                    <TInput value={createForm.bairro_aluno ?? ""} onChange={(v) => setCreateField("bairro_aluno", v)} onBlur={(v) => setCreateFieldUpper("bairro_aluno", v)} />
+                  </Field>
+                </Row2>
+                <Row2>
+                  <Field label="Cidade">
+                    <TInput value={createForm.cidade_aluno ?? ""} onChange={(v) => setCreateField("cidade_aluno", v)} onBlur={(v) => setCreateFieldUpper("cidade_aluno", v)} />
+                  </Field>
+                  <Field label="Estado">
+                    <TInput value={createForm.estado_residencia ?? ""} onChange={(v) => setCreateField("estado_residencia", v)} onBlur={(v) => setCreateFieldUpper("estado_residencia", v)} />
+                  </Field>
+                </Row2>
+              </Section>
+
+              {/* ── Filiação — Mãe ── */}
+              <Section title="Filiação — Mãe">
+                <Row2>
+                  <Field label="Nome da Mãe">
+                    <TInput value={createForm.nome_mae ?? ""} onChange={(v) => setCreateField("nome_mae", v)} onBlur={(v) => setCreateFieldUpper("nome_mae", v)} />
+                  </Field>
+                  <Field label="Profissão">
+                    <TInput value={createForm.profissao_mae ?? ""} onChange={(v) => setCreateField("profissao_mae", v)} onBlur={(v) => setCreateFieldUpper("profissao_mae", v)} />
+                  </Field>
+                </Row2>
+                <Row2>
+                  <Field label="CPF">
+                    <TInput value={createForm.cpf_mae ?? ""} onChange={(v) => setCreateField("cpf_mae", v)} />
+                  </Field>
+                  <Field label="RG">
+                    <TInput value={createForm.rg_mae ?? ""} onChange={(v) => setCreateField("rg_mae", v)} />
+                  </Field>
+                </Row2>
+              </Section>
+
+              {/* ── Filiação — Pai ── */}
+              <Section title="Filiação — Pai">
+                <Row2>
+                  <Field label="Nome do Pai">
+                    <TInput value={createForm.nome_pai ?? ""} onChange={(v) => setCreateField("nome_pai", v)} onBlur={(v) => setCreateFieldUpper("nome_pai", v)} />
+                  </Field>
+                  <Field label="Profissão">
+                    <TInput value={createForm.profissao_pai ?? ""} onChange={(v) => setCreateField("profissao_pai", v)} onBlur={(v) => setCreateFieldUpper("profissao_pai", v)} />
+                  </Field>
+                </Row2>
+                <Row2>
+                  <Field label="CPF">
+                    <TInput value={createForm.cpf_pai ?? ""} onChange={(v) => setCreateField("cpf_pai", v)} />
+                  </Field>
+                  <Field label="RG">
+                    <TInput value={createForm.rg_pai ?? ""} onChange={(v) => setCreateField("rg_pai", v)} />
+                  </Field>
+                </Row2>
+              </Section>
+
+              {/* ── Responsável ── */}
+              <Section title="Responsável">
+                <Row2>
+                  <Field label="Nome do Responsável">
+                    <TInput value={createForm.nome_responsavel ?? ""} onChange={(v) => setCreateField("nome_responsavel", v)} onBlur={(v) => setCreateFieldUpper("nome_responsavel", v)} />
+                  </Field>
+                  <Field label="Telefone / Contato">
+                    <TInput value={createForm.fone_contato ?? ""} onChange={(v) => setCreateField("fone_contato", v)} />
+                  </Field>
+                </Row2>
+              </Section>
+
+              {/* ── Saúde ── */}
+              <Section title="Saúde">
+                <div className="flex flex-col gap-3">
+                  <label className="flex items-center gap-3 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={createForm.possui_alergia ?? false}
+                      onChange={(e) => setCreateField("possui_alergia", e.target.checked)}
+                      className="h-4 w-4 rounded border-gray-300 accent-violet-600"
+                    />
+                    <span className="text-sm font-medium text-gray-700">Possui alergia</span>
+                  </label>
+                  {createForm.possui_alergia && (
+                    <Field label="Qual alergia?">
+                      <TInput value={createForm.qual_alergia ?? ""} onChange={(v) => setCreateField("qual_alergia", v)} onBlur={(v) => setCreateFieldUpper("qual_alergia", v)} />
+                    </Field>
+                  )}
+                  <label className="flex items-center gap-3 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={createForm.necessidade_especial ?? false}
+                      onChange={(e) => setCreateField("necessidade_especial", e.target.checked)}
+                      className="h-4 w-4 rounded border-gray-300 accent-violet-600"
+                    />
+                    <span className="text-sm font-medium text-gray-700">Necessidade especial</span>
+                  </label>
+                  {createForm.necessidade_especial && (
+                    <Field label="Descrição">
+                      <TInput value={createForm.necessidade_especial_text ?? ""} onChange={(v) => setCreateField("necessidade_especial_text", v)} onBlur={(v) => setCreateFieldUpper("necessidade_especial_text", v)} />
+                    </Field>
+                  )}
+                </div>
+              </Section>
+
+              {/* ── Informações Escolares ── */}
+              <Section title="Informações Escolares">
+                <Row3>
+                  <Field label="Série">
+                    <select value={createForm.serie ?? activeSerie} onChange={(e) => setCreateField("serie", e.target.value)} className={selectCls}>
+                      {series.map((s) => <option key={s} value={s}>{s}</option>)}
+                    </select>
+                  </Field>
+                  <Field label="Ano Letivo">
+                    <TInput value={createForm.ano_letivo ?? ""} onChange={(v) => setCreateField("ano_letivo", v)} onBlur={(v) => setCreateFieldUpper("ano_letivo", v)} />
+                  </Field>
+                  <Field label="Status">
+                    <select value={createForm.status ?? STATUS_ATIVO} onChange={(e) => setCreateField("status", e.target.value)} className={selectCls}>
+                      <option value="Matriculado">Matriculado</option>
+                      {STATUS_HISTORICO.map((s) => <option key={s} value={s}>{s}</option>)}
+                    </select>
+                  </Field>
+                </Row3>
+                <Row3>
+                  <Field label="Horário">
+                    <TInput value={createForm.qual_horario ?? ""} onChange={(v) => setCreateField("qual_horario", v)} onBlur={(v) => setCreateFieldUpper("qual_horario", v)} />
+                  </Field>
+                  <Field label="Projeto">
+                    <TInput value={createForm.qual_projeto ?? ""} onChange={(v) => setCreateField("qual_projeto", v)} onBlur={(v) => setCreateFieldUpper("qual_projeto", v)} />
+                  </Field>
+                  <Field label="Tipo de Cadastro">
+                    <TInput value={createForm.tipo_cadastro ?? ""} onChange={(v) => setCreateField("tipo_cadastro", v)} onBlur={(v) => setCreateFieldUpper("tipo_cadastro", v)} />
+                  </Field>
+                </Row3>
+              </Section>
+
+            </div>
+
+            {/* Footer */}
+            {createError && (
+              <p className="px-6 py-2 text-xs text-red-600 bg-red-50 border-t border-red-100">{createError}</p>
+            )}
+            <div className="flex items-center justify-end gap-3 border-t border-gray-100 px-6 py-4">
+              <button
+                type="button"
+                onClick={closeCreate}
+                disabled={creating}
+                className="rounded-lg border border-gray-200 px-4 py-2 text-sm font-semibold text-gray-600 hover:bg-gray-50 disabled:opacity-50"
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                onClick={handleCreate}
+                disabled={creating}
+                className="inline-flex items-center gap-2 rounded-lg bg-emerald-600 px-5 py-2 text-sm font-semibold text-white shadow-sm hover:bg-emerald-700 disabled:opacity-60"
+              >
+                {creating
+                  ? <><Loader2 className="h-4 w-4 animate-spin" />{uploadingPhoto ? "Enviando foto..." : "Cadastrando..."}</>
+                  : <><UserPlus className="h-4 w-4" />Cadastrar Aluno</>
+                }
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ── Modal de edição ──────────────────────────────────────────────── */}
       {editingAluno && (
