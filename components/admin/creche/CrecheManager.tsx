@@ -113,10 +113,17 @@ function openPrint(a: Aluno) {
       font-size: 10px; font-weight: bold;
       background: ${a.status === "Ativo" ? "#d1fae5" : a.status === "Transferido" ? "#fef9c3" : "#f3f4f6"};
       color: ${a.status === "Ativo" ? "#065f46" : a.status === "Transferido" ? "#854d0e" : "#374151"}; }
+    .signature-section { margin-top: 28px; }
+    .declaration { font-size: 11px; color: #444; line-height: 1.6; margin-bottom: 24px; text-align: justify; }
+    .signature-row { display: flex; gap: 40px; align-items: flex-end; margin-top: 8px; }
+    .signature-block { flex: 1; }
+    .date-block { flex: 0 0 220px; }
+    .signature-line { border-bottom: 1px solid #111; height: 32px; margin-bottom: 4px; }
+    .signature-label { font-size: 10px; color: #555; text-align: center; }
     .actions { margin-top: 24px; border-top: 1px solid #eee; padding-top: 16px; text-align: right; }
     .btn-print { padding: 8px 24px; background: #ea580c; color: #fff; border: none;
       border-radius: 6px; font-size: 13px; font-weight: bold; cursor: pointer; }
-    @media print { .actions { display: none; } body { padding: 12px; } .student-photo { break-inside: avoid; } }
+    @media print { .actions { display: none; } body { padding: 12px; } .student-photo { break-inside: avoid; } .signature-section { page-break-inside: avoid; margin-top: 32px; } }
   </style>
 </head>
 <body>
@@ -203,6 +210,24 @@ function openPrint(a: Aluno) {
       <div class="field"><label>Projeto</label><span>${val(a.qual_projeto)}</span></div>
       <div class="field"><label>Tipo de Cadastro</label><span>${val(a.tipo_cadastro)}</span></div>
       <div class="field"><label>Transferido</label><span>${a.transferido ? "Sim" : "Não"}</span></div>
+    </div>
+  </div>
+
+  <div class="section signature-section">
+    <div class="section-title">Declaração e Assinatura do Responsável</div>
+    <p class="declaration">
+      Declaro que as informações prestadas neste formulário são verdadeiras e que estou ciente das normas e regulamentos
+      da instituição, comprometendo-me a comunicar quaisquer alterações nos dados acima.
+    </p>
+    <div class="signature-row">
+      <div class="signature-block">
+        <div class="signature-line"></div>
+        <p class="signature-label">${val(a.nome_responsavel) !== "—" ? escapeHtml(val(a.nome_responsavel)) : "Assinatura do Responsável"}</p>
+      </div>
+      <div class="signature-block date-block">
+        <div class="signature-line"></div>
+        <p class="signature-label">Data: ______ / ______ / __________</p>
+      </div>
     </div>
   </div>
 
@@ -546,6 +571,9 @@ export function CrecheManager() {
     }
 
     closeCreate();
+
+    // Abre a ficha para impressão imediatamente após o cadastro
+    if (inserted) openPrint(inserted as Aluno);
   }
 
   // Campos que NÃO devem ser convertidos para uppercase
