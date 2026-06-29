@@ -377,7 +377,7 @@ export function CrecheManager() {
     setEditForm({});
   }
 
-  function openCreate() {
+  async function openCreate() {
     const anoAtual = String(new Date().getFullYear());
     setCreateForm({
       serie: activeSerie,
@@ -391,6 +391,56 @@ export function CrecheManager() {
     setPhotoPreview(null);
     setCreateError(null);
     setCreatingAluno(true);
+
+    // Busca a próxima matrícula automaticamente
+    try {
+      const supabase = createSupabaseBrowserClient();
+      const { data } = await supabase
+        .from("alunos")
+        .select("matricula_nr")
+        .not("matricula_nr", "is", null);
+
+      if (data && data.length > 0) {
+        // Extrai todos os valores numéricos finais de cada matrícula e pega o maior
+        const proxima = gerarProximaMatricula(
+          data.map((r: { matricula_nr: string }) => r.matricula_nr).filter(Boolean)
+        );
+        if (proxima) {
+          setCreateForm((f) => ({ ...f, matricula_nr: proxima }));
+        }
+      }
+    } catch {
+      // silencia — usuário preenche manualmente se falhar
+    }
+  }
+
+  /** Recebe todas as matrículas existentes e devolve a próxima no mesmo formato. */
+  function gerarProximaMatricula(matriculas: string[]): string | null {
+    if (matriculas.length === 0) return null;
+
+    let melhorBase = "";
+    let melhorNum  = -1;
+
+    for (const m of matriculas) {
+      // Extrai o bloco numérico mais à direita (ex: "2024001" → num=1, "MAT-042" → num=42)
+      const match = m.match(/^(.*?)(\d+)$/);
+      if (!match) continue;
+      const num = parseInt(match[2], 10);
+      if (num > melhorNum) {
+        melhorNum  = num;
+        melhorBase = m; // guarda a matrícula completa com maior número
+      }
+    }
+
+    if (melhorNum < 0) return null;
+
+    // Reconstrói preservando prefixo e zero-padding do modelo escolhido
+    const match = melhorBase.match(/^(.*?)(\d+)$/);
+    if (!match) return null;
+    const prefixo  = match[1];                       // ex: "2024" ou "MAT-" ou ""
+    const tamanho  = match[2].length;                // ex: 3 para "001"
+    const proximo  = String(melhorNum + 1).padStart(tamanho, "0");
+    return (prefixo + proximo).toUpperCase();
   }
 
   function closeCreate() {
