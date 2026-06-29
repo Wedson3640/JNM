@@ -940,7 +940,7 @@ export function CrecheManager() {
                 </Row2>
                 <Row3>
                   <Field label="Data de Nascimento">
-                    <TInput value={createForm.data_nascimento ?? ""} onChange={(v) => setCreateField("data_nascimento", v)} />
+                    <DateInput value={createForm.data_nascimento ?? ""} onChange={(v) => setCreateField("data_nascimento", v)} />
                   </Field>
                   <Field label="Sexo">
                     <select value={createForm.sexo ?? ""} onChange={(e) => setCreateField("sexo", e.target.value)} className={selectCls}>
@@ -967,7 +967,7 @@ export function CrecheManager() {
                     <TInput value={createForm.assento_nr ?? ""} onChange={(v) => setCreateField("assento_nr", v)} onBlur={(v) => setCreateFieldUpper("assento_nr", v)} />
                   </Field>
                   <Field label="Data do Registro">
-                    <TInput value={createForm.data_registro_nascimento ?? ""} onChange={(v) => setCreateField("data_registro_nascimento", v)} />
+                    <DateInput value={createForm.data_registro_nascimento ?? ""} onChange={(v) => setCreateField("data_registro_nascimento", v)} />
                   </Field>
                   <Field label="Cartório">
                     <TInput value={createForm.cartorio_registro ?? ""} onChange={(v) => setCreateField("cartorio_registro", v)} onBlur={(v) => setCreateFieldUpper("cartorio_registro", v)} />
@@ -1196,7 +1196,7 @@ export function CrecheManager() {
                 </Row2>
                 <Row3>
                   <Field label="Data de Nascimento">
-                    <TInput value={editForm.data_nascimento ?? ""} onChange={(v) => setField("data_nascimento", v)} />
+                    <DateInput value={editForm.data_nascimento ?? ""} onChange={(v) => setField("data_nascimento", v)} />
                   </Field>
                   <Field label="Sexo">
                     <select value={editForm.sexo ?? ""} onChange={(e) => setField("sexo", e.target.value)} className={selectCls}>
@@ -1226,7 +1226,7 @@ export function CrecheManager() {
                     <TInput value={editForm.assento_nr ?? ""} onChange={(v) => setField("assento_nr", v)} onBlur={(v) => setFieldUpper("assento_nr", v)} />
                   </Field>
                   <Field label="Data do Registro">
-                    <TInput value={editForm.data_registro_nascimento ?? ""} onChange={(v) => setField("data_registro_nascimento", v)} />
+                    <DateInput value={editForm.data_registro_nascimento ?? ""} onChange={(v) => setField("data_registro_nascimento", v)} />
                   </Field>
                   <Field label="Cartório">
                     <TInput value={editForm.cartorio_registro ?? ""} onChange={(v) => setField("cartorio_registro", v)} onBlur={(v) => setFieldUpper("cartorio_registro", v)} />
@@ -1468,6 +1468,38 @@ function TInput({
       onChange={(e) => onChange(e.target.value)}
       onBlur={(e) => onBlur?.(e.target.value)}
       className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm outline-none focus:border-violet-400 focus:ring-1 focus:ring-violet-100 uppercase placeholder:normal-case"
+    />
+  );
+}
+
+/** Input de data com máscara automática dd/mm/yyyy enquanto o usuário digita. */
+function DateInput({
+  value,
+  onChange,
+}: {
+  value: string;
+  onChange: (v: string) => void;
+}) {
+  function applyMask(raw: string): string {
+    const digits = raw.replace(/\D/g, "").slice(0, 8);
+    if (digits.length <= 2) return digits;
+    if (digits.length <= 4) return `${digits.slice(0, 2)}/${digits.slice(2)}`;
+    return `${digits.slice(0, 2)}/${digits.slice(2, 4)}/${digits.slice(4)}`;
+  }
+
+  function handleChange(e: React.ChangeEvent<HTMLInputElement>) {
+    onChange(applyMask(e.target.value));
+  }
+
+  return (
+    <input
+      type="text"
+      inputMode="numeric"
+      value={value}
+      placeholder="dd/mm/aaaa"
+      maxLength={10}
+      onChange={handleChange}
+      className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm outline-none focus:border-violet-400 focus:ring-1 focus:ring-violet-100 placeholder:text-gray-300 tracking-widest"
     />
   );
 }
