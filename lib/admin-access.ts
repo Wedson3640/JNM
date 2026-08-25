@@ -22,6 +22,7 @@ export const adminNavAccess: AdminNavItem[] = [
   { label: "Config. Creche Miranez", href: "/admin/creche/config", profile: "creche" },
   { label: "Config. Palestra", href: "/admin/palestras", profile: "palestras" },
   { label: "Serv. Sociais", href: "/admin/servicos", profile: "servicos" },
+  { label: "Inscrições SCFV", href: "/admin/servicos/convivencia", profile: "servicos" },
   { label: "Livraria", href: "/admin/livraria", profile: "livraria" },
   { label: "Vídeos",      href: "/admin/videos",      profile: "videos" },
   { label: "Financeiro",  href: "/admin/financeiro",  profile: "financeiro" },
