@@ -16,9 +16,6 @@ export type Familiar = {
 
 export type Inscricao = {
   id: string;
-  cras_referencia: string | null;
-  local_funcionamento: string | null;
-  endereco_funcionamento: string | null;
   nome: string;
   sexo_genero: string | null;
   nis: string | null;
@@ -147,7 +144,6 @@ function openPrint(i: Inscricao, familiares: Familiar[]) {
 </head>
 <body>
   <h1>Ficha de Inscrição — Serviço de Convivência e Fortalecimento de Vínculos (SCFV)</h1>
-  <p class="sub">CRAS: <strong>${val(i.cras_referencia)}</strong> · Local: <strong>${val(i.local_funcionamento)}</strong></p>
 
   <div class="section">
     <div class="section-title">1. Dados sociofamiliares</div>
@@ -489,7 +485,6 @@ export function ConvivenciaManager() {
                 <tr className="border-b border-gray-100 text-left text-xs font-semibold uppercase tracking-wide text-gray-400">
                   <th className="px-4 py-3">Nome</th>
                   <th className="px-4 py-3">CPF</th>
-                  <th className="px-4 py-3">CRAS</th>
                   <th className="px-4 py-3">Status</th>
                   <th className="px-4 py-3 text-right">Ações</th>
                 </tr>
@@ -499,7 +494,6 @@ export function ConvivenciaManager() {
                   <tr key={i.id} className="border-b border-gray-50 hover:bg-gray-50">
                     <td className="px-4 py-3 font-medium text-gray-900">{i.nome}</td>
                     <td className="px-4 py-3 text-gray-500">{val(i.cpf)}</td>
-                    <td className="px-4 py-3 text-gray-500">{val(i.cras_referencia)}</td>
                     <td className="px-4 py-3">
                       <span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${STATUS_STYLE[i.status] ?? "bg-gray-100 text-gray-500"}`}>
                         {i.status}
@@ -541,20 +535,6 @@ export function ConvivenciaManager() {
             </div>
 
             <div className="flex-1 overflow-y-auto px-6 py-5 space-y-6">
-              <Section title="Dados do serviço">
-                <Row3>
-                  <Field label="CRAS de referência">
-                    <TInput value={form.cras_referencia ?? ""} onChange={(v) => setField("cras_referencia", v)} />
-                  </Field>
-                  <Field label="Local de funcionamento">
-                    <TInput value={form.local_funcionamento ?? ""} onChange={(v) => setField("local_funcionamento", v)} />
-                  </Field>
-                  <Field label="Endereço de funcionamento">
-                    <TInput value={form.endereco_funcionamento ?? ""} onChange={(v) => setField("endereco_funcionamento", v)} />
-                  </Field>
-                </Row3>
-              </Section>
-
               <Section title="1. Dados sociofamiliares">
                 <Row3>
                   <Field label="Nome *">
