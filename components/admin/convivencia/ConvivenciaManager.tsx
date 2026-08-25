@@ -572,7 +572,7 @@ export function ConvivenciaManager() {
                     <DateInput value={form.data_nascimento ?? ""} onChange={(v) => setField("data_nascimento", v)} />
                   </Field>
                   <Field label="CPF">
-                    <TInput value={form.cpf ?? ""} onChange={(v) => setField("cpf", v)} />
+                    <CPFInput value={form.cpf ?? ""} onChange={(v) => setField("cpf", v)} />
                   </Field>
                   <Field label="Nome social">
                     <TInput value={form.nome_social ?? ""} onChange={(v) => setField("nome_social", v)} />
@@ -591,7 +591,7 @@ export function ConvivenciaManager() {
                 </Row3>
                 <Row2>
                   <Field label="CPF da mãe">
-                    <TInput value={form.cpf_mae ?? ""} onChange={(v) => setField("cpf_mae", v)} />
+                    <CPFInput value={form.cpf_mae ?? ""} onChange={(v) => setField("cpf_mae", v)} />
                   </Field>
                   <Field label="Nome do responsável">
                     <TInput value={form.nome_responsavel ?? ""} onChange={(v) => setField("nome_responsavel", v)} />
@@ -705,9 +705,11 @@ export function ConvivenciaManager() {
                       </label>
                       <input
                         type="text"
+                        inputMode="numeric"
                         value={f.cpf}
                         placeholder="CPF"
-                        onChange={(e) => updateFamiliar(idx, { cpf: e.target.value })}
+                        maxLength={11}
+                        onChange={(e) => updateFamiliar(idx, { cpf: e.target.value.replace(/\D/g, "").slice(0, 11) })}
                         className="rounded-lg border border-gray-200 px-2 py-1.5 text-sm text-gray-700 outline-none focus:border-violet-400"
                       />
                       <button type="button" onClick={() => removeFamiliar(idx)} className="rounded-lg p-1.5 text-gray-400 hover:bg-gray-100 hover:text-red-600">
@@ -891,6 +893,21 @@ function TArea({ value, onChange }: { value: string; onChange: (v: string) => vo
       rows={2}
       onChange={(e) => onChange(e.target.value)}
       className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-700 outline-none focus:border-violet-400 focus:ring-1 focus:ring-violet-100"
+    />
+  );
+}
+
+/** Input de CPF: aceita apenas dígitos, limitado a 11. */
+function CPFInput({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+  return (
+    <input
+      type="text"
+      inputMode="numeric"
+      value={value}
+      placeholder="Somente números"
+      maxLength={11}
+      onChange={(e) => onChange(e.target.value.replace(/\D/g, "").slice(0, 11))}
+      className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-700 outline-none focus:border-violet-400 focus:ring-1 focus:ring-violet-100 placeholder:text-gray-300 tracking-widest"
     />
   );
 }
