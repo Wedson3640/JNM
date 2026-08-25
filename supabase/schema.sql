@@ -474,6 +474,7 @@ create table if not exists public.convivencia_inscricoes (
 
   -- Dados sociofamiliares do usuário
   nome text not null check (char_length(nome) >= 3),
+  foto_url text,
   sexo_genero text,
   nis text,
   data_nascimento text,
@@ -554,6 +555,34 @@ drop trigger if exists convivencia_inscricoes_set_updated_at on public.convivenc
 create trigger convivencia_inscricoes_set_updated_at before update on public.convivencia_inscricoes for each row execute function public.set_updated_at();
 
 create index if not exists idx_convivencia_familiares_inscricao on public.convivencia_familiares (inscricao_id);
+
+insert into storage.buckets (id, name, public)
+values ('convivencia', 'convivencia', true)
+on conflict (id) do update set public = true;
+
+drop policy if exists "Public read convivencia" on storage.objects;
+create policy "Public read convivencia"
+on storage.objects for select
+using (bucket_id = 'convivencia');
+
+drop policy if exists "Authenticated upload convivencia" on storage.objects;
+create policy "Authenticated upload convivencia"
+on storage.objects for insert
+to authenticated
+with check (bucket_id = 'convivencia');
+
+drop policy if exists "Authenticated update convivencia" on storage.objects;
+create policy "Authenticated update convivencia"
+on storage.objects for update
+to authenticated
+using (bucket_id = 'convivencia')
+with check (bucket_id = 'convivencia');
+
+drop policy if exists "Authenticated delete convivencia" on storage.objects;
+create policy "Authenticated delete convivencia"
+on storage.objects for delete
+to authenticated
+using (bucket_id = 'convivencia');
 
 -- Atualiza o cache do PostgREST usado pela API REST do Supabase.
 notify pgrst, 'reload schema';

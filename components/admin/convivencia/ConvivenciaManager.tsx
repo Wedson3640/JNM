@@ -1,22 +1,14 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { createSupabaseBrowserClient } from "@/lib/supabase-browser";
-import { Loader2, Pencil, Plus, Printer, Save, Search, Trash2, UserPlus, Users, X } from "lucide-react";
+import { Loader2, Pencil, Printer, Save, Search, Trash2, Upload, UserPlus, UserRound, Users, X } from "lucide-react";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
-export type Familiar = {
-  id?: string;
-  nome: string;
-  data_nascimento: string;
-  vinculo_sociofamiliar: string;
-  responsavel_legal: boolean;
-  cpf: string;
-};
-
 export type Inscricao = {
   id: string;
   nome: string;
+  foto_url: string | null;
   sexo_genero: string | null;
   nis: string | null;
   data_nascimento: string | null;
@@ -39,8 +31,6 @@ export type Inscricao = {
   ano_serie: string | null;
   turno: string | null;
   ultima_serie_cursada: string | null;
-  motivo_procura: string | null;
-  como_soube: string | null;
   renda_familiar: string | null;
   procedimentos_encaminhamentos: string | null;
   disponibilidade_horarios: string | null;
@@ -92,23 +82,9 @@ function escapeHtml(v: string) {
 }
 
 // ─── Impressão da ficha ─────────────────────────────────────────────────────
-function openPrint(i: Inscricao, familiares: Familiar[]) {
+function openPrint(i: Inscricao) {
   const win = window.open("", "_blank", "width=860,height=1000");
   if (!win) return;
-
-  const familiaresRows = familiares.length
-    ? familiares
-        .map(
-          (f) => `<tr>
-            <td>${escapeHtml(f.nome || "—")}</td>
-            <td>${escapeHtml(f.data_nascimento || "—")}</td>
-            <td>${escapeHtml(f.vinculo_sociofamiliar || "—")}</td>
-            <td style="text-align:center">${f.responsavel_legal ? "X" : ""}</td>
-            <td>${escapeHtml(f.cpf || "—")}</td>
-          </tr>`
-        )
-        .join("")
-    : `<tr><td colspan="5" style="text-align:center;color:#999">Nenhum familiar informado</td></tr>`;
 
   const situacoesMarcadas = SITUACOES.filter((s) => i.situacao_usuario?.includes(s.code))
     .map((s) => `${s.code}. ${s.label}`)
@@ -130,9 +106,11 @@ function openPrint(i: Inscricao, familiares: Familiar[]) {
   .grid3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 6px 20px; }
   .field label { font-size: 10px; color: #666; display: block; margin-bottom: 1px; }
   .field span { font-weight: 600; font-size: 12px; }
-  table.familia { width: 100%; border-collapse: collapse; margin-top: 6px; font-size: 11px; }
-  table.familia th, table.familia td { border: 1px solid #ccc; padding: 4px 6px; text-align: left; }
-  table.familia th { background: #f8f8f8; font-size: 10px; text-transform: uppercase; }
+  .photo-box { float: right; width: 100px; margin-left: 16px; }
+  .student-photo { display: block; width: 100px; height: 120px; object-fit: cover; object-position: center top;
+    border: 1px solid #d1d5db; border-radius: 8px; background: #f9fafb; }
+  .photo-empty { display: flex; align-items: center; justify-content: center; color: #9ca3af;
+    font-size: 10px; font-weight: bold; text-transform: uppercase; letter-spacing: .06em; }
   .signature-row { display: flex; gap: 40px; align-items: flex-end; margin-top: 40px; }
   .signature-block { flex: 1; }
   .signature-line { border-bottom: 1px solid #111; height: 32px; margin-bottom: 4px; }
@@ -143,6 +121,11 @@ function openPrint(i: Inscricao, familiares: Familiar[]) {
 </style>
 </head>
 <body>
+  <div class="photo-box">${
+    i.foto_url?.trim()
+      ? `<img class="student-photo" src="${escapeAttr(i.foto_url)}" alt="Foto de ${escapeAttr(i.nome)}">`
+      : `<div class="student-photo photo-empty">Sem foto</div>`
+  }</div>
   <h1>Ficha de Inscrição — Serviço de Convivência e Fortalecimento de Vínculos (SCFV)</h1>
 
   <div class="section">
@@ -175,23 +158,7 @@ function openPrint(i: Inscricao, familiares: Familiar[]) {
   </div>
 
   <div class="section">
-    <div class="section-title">Motivo da procura / Como soube</div>
-    <div class="grid2">
-      <div class="field"><label>Motivo</label><span>${val(i.motivo_procura)}</span></div>
-      <div class="field"><label>Como soube</label><span>${val(i.como_soube)}</span></div>
-    </div>
-  </div>
-
-  <div class="section">
-    <div class="section-title">2. Pessoas que compõem o núcleo familiar</div>
-    <table class="familia">
-      <thead><tr><th>Nome</th><th>Data Nasc.</th><th>Vínculo</th><th>Resp. Legal</th><th>CPF</th></tr></thead>
-      <tbody>${familiaresRows}</tbody>
-    </table>
-  </div>
-
-  <div class="section">
-    <div class="section-title">3. Diagnóstico sociofamiliar</div>
+    <div class="section-title">2. Diagnóstico sociofamiliar</div>
     <div class="grid2">
       <div class="field"><label>Renda familiar</label><span>${val(i.renda_familiar)}</span></div>
       <div class="field"><label>Disponibilidade de horários</label><span>${val(i.disponibilidade_horarios)}</span></div>
@@ -243,9 +210,12 @@ export function ConvivenciaManager() {
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<Inscricao | null>(null);
   const [form, setForm] = useState<Partial<Inscricao>>(EMPTY_FORM);
-  const [familiares, setFamiliares] = useState<Familiar[]>([]);
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
+  const [photoFile, setPhotoFile] = useState<File | null>(null);
+  const [photoPreview, setPhotoPreview] = useState<string | null>(null);
+  const [uploadingPhoto, setUploadingPhoto] = useState(false);
+  const photoInputRef = useRef<HTMLInputElement>(null);
 
   async function load() {
     setLoading(true);
@@ -282,24 +252,19 @@ export function ConvivenciaManager() {
   function openCreate() {
     setEditing(null);
     setForm(EMPTY_FORM);
-    setFamiliares([]);
+    setPhotoFile(null);
+    setPhotoPreview(null);
     setSaveError(null);
     setModalOpen(true);
   }
 
-  async function openEdit(inscricao: Inscricao) {
+  function openEdit(inscricao: Inscricao) {
     setEditing(inscricao);
     setForm(inscricao);
+    setPhotoFile(null);
+    setPhotoPreview(inscricao.foto_url ?? null);
     setSaveError(null);
     setModalOpen(true);
-
-    const supabase = createSupabaseBrowserClient();
-    const { data } = await supabase
-      .from("convivencia_familiares")
-      .select("*")
-      .eq("inscricao_id", inscricao.id)
-      .order("ordem", { ascending: true });
-    setFamiliares((data ?? []) as Familiar[]);
   }
 
   function closeModal() {
@@ -307,7 +272,8 @@ export function ConvivenciaManager() {
     setModalOpen(false);
     setEditing(null);
     setForm(EMPTY_FORM);
-    setFamiliares([]);
+    setPhotoFile(null);
+    setPhotoPreview(null);
   }
 
   function setField<K extends keyof Inscricao>(key: K, value: Inscricao[K]) {
@@ -322,16 +288,11 @@ export function ConvivenciaManager() {
     });
   }
 
-  function addFamiliar() {
-    setFamiliares((prev) => [...prev, { nome: "", data_nascimento: "", vinculo_sociofamiliar: "", responsavel_legal: false, cpf: "" }]);
-  }
-
-  function updateFamiliar(index: number, patch: Partial<Familiar>) {
-    setFamiliares((prev) => prev.map((f, i) => (i === index ? { ...f, ...patch } : f)));
-  }
-
-  function removeFamiliar(index: number) {
-    setFamiliares((prev) => prev.filter((_, i) => i !== index));
+  function handlePhotoChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setPhotoFile(file);
+    setPhotoPreview(URL.createObjectURL(file));
   }
 
   async function handleSave() {
@@ -343,9 +304,34 @@ export function ConvivenciaManager() {
     setSaveError(null);
 
     const supabase = createSupabaseBrowserClient();
-    const { id: _id, created_at: _createdAt, ...payload } = form as Inscricao;
 
-    let inscricaoId = editing?.id ?? null;
+    // Faz upload da foto se houver arquivo selecionado
+    let fotoUrl: string | null = form.foto_url ?? null;
+    if (photoFile) {
+      setUploadingPhoto(true);
+      try {
+        const ext = photoFile.name.split(".").pop() ?? "jpg";
+        const path = `convivencia/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
+        const { error: uploadErr } = await supabase.storage
+          .from("convivencia")
+          .upload(path, photoFile, { upsert: false });
+
+        if (!uploadErr) {
+          const { data: urlData } = supabase.storage.from("convivencia").getPublicUrl(path);
+          fotoUrl = urlData.publicUrl;
+        } else {
+          console.warn("Upload de foto falhou:", uploadErr.message);
+        }
+      } catch {
+        console.warn("Erro inesperado no upload de foto.");
+      } finally {
+        setUploadingPhoto(false);
+      }
+    }
+
+    const { id: _id, created_at: _createdAt, ...rest } = form as Inscricao;
+    const payload: Partial<Inscricao> = { ...rest, foto_url: fotoUrl };
+
     let savedRecord: Inscricao | null = null;
 
     if (editing) {
@@ -373,42 +359,12 @@ export function ConvivenciaManager() {
         return;
       }
       savedRecord = data as Inscricao;
-      inscricaoId = savedRecord.id;
-    }
-
-    // Substitui o núcleo familiar (apaga e reinsere)
-    if (inscricaoId) {
-      await supabase.from("convivencia_familiares").delete().eq("inscricao_id", inscricaoId);
-      const familiaresValidos = familiares.filter((f) => f.nome.trim());
-      if (familiaresValidos.length) {
-        await supabase.from("convivencia_familiares").insert(
-          familiaresValidos.map((f, idx) => ({
-            inscricao_id: inscricaoId,
-            ordem: idx,
-            nome: f.nome,
-            data_nascimento: f.data_nascimento || null,
-            vinculo_sociofamiliar: f.vinculo_sociofamiliar || null,
-            responsavel_legal: f.responsavel_legal,
-            cpf: f.cpf || null,
-          }))
-        );
-      }
     }
 
     setSaving(false);
     await load();
     closeModal();
-    if (savedRecord) openPrint(savedRecord, familiares.filter((f) => f.nome.trim()));
-  }
-
-  async function printInscricao(inscricao: Inscricao) {
-    const supabase = createSupabaseBrowserClient();
-    const { data } = await supabase
-      .from("convivencia_familiares")
-      .select("*")
-      .eq("inscricao_id", inscricao.id)
-      .order("ordem", { ascending: true });
-    openPrint(inscricao, (data ?? []) as Familiar[]);
+    if (savedRecord) openPrint(savedRecord);
   }
 
   async function handleDelete(inscricao: Inscricao) {
@@ -501,7 +457,7 @@ export function ConvivenciaManager() {
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex items-center justify-end gap-1">
-                        <button type="button" onClick={() => printInscricao(i)} className="rounded-lg p-2 text-gray-400 hover:bg-gray-100 hover:text-gray-700" title="Imprimir">
+                        <button type="button" onClick={() => openPrint(i)} className="rounded-lg p-2 text-gray-400 hover:bg-gray-100 hover:text-gray-700" title="Imprimir">
                           <Printer className="h-4 w-4" />
                         </button>
                         <button type="button" onClick={() => openEdit(i)} className="rounded-lg p-2 text-gray-400 hover:bg-gray-100 hover:text-violet-600" title="Editar">
@@ -535,6 +491,51 @@ export function ConvivenciaManager() {
             </div>
 
             <div className="flex-1 overflow-y-auto px-6 py-5 space-y-6">
+              <Section title="Foto">
+                <div className="flex items-start gap-5">
+                  <div className="relative shrink-0">
+                    {photoPreview ? (
+                      <img
+                        src={photoPreview}
+                        alt="Preview da foto"
+                        className="h-32 w-28 rounded-xl object-cover object-top border border-gray-200 shadow-sm"
+                      />
+                    ) : (
+                      <div className="flex h-32 w-28 items-center justify-center rounded-xl border-2 border-dashed border-gray-200 bg-gray-50">
+                        <UserRound className="h-10 w-10 text-gray-300" />
+                      </div>
+                    )}
+                    {photoPreview && (
+                      <button
+                        type="button"
+                        onClick={() => { setPhotoFile(null); setPhotoPreview(null); setField("foto_url", null); if (photoInputRef.current) photoInputRef.current.value = ""; }}
+                        className="absolute -top-2 -right-2 rounded-full bg-white border border-gray-200 p-0.5 text-gray-400 hover:text-red-500 shadow-sm"
+                      >
+                        <X className="h-3.5 w-3.5" />
+                      </button>
+                    )}
+                  </div>
+                  <div className="flex flex-col gap-3 pt-1">
+                    <input
+                      ref={photoInputRef}
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={handlePhotoChange}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => photoInputRef.current?.click()}
+                      className="inline-flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-4 py-2 text-sm font-semibold text-gray-600 hover:bg-gray-50 hover:border-gray-300 transition-colors"
+                    >
+                      <Upload className="h-4 w-4" />
+                      {photoPreview ? "Trocar foto" : "Selecionar foto"}
+                    </button>
+                    <p className="text-xs text-gray-400 leading-relaxed">JPG, PNG ou WEBP.<br />A foto será enviada ao salvar.</p>
+                  </div>
+                </div>
+              </Section>
+
               <Section title="1. Dados sociofamiliares">
                 <Row3>
                   <Field label="Nome *">
@@ -639,76 +640,7 @@ export function ConvivenciaManager() {
                 </Row2>
               </Section>
 
-              <Section title="Contexto da procura">
-                <Row2>
-                  <Field label="Qual o motivo pelo qual procurou o serviço?">
-                    <TArea value={form.motivo_procura ?? ""} onChange={(v) => setField("motivo_procura", v)} />
-                  </Field>
-                  <Field label="Como soube da existência do serviço?">
-                    <TArea value={form.como_soube ?? ""} onChange={(v) => setField("como_soube", v)} />
-                  </Field>
-                </Row2>
-              </Section>
-
-              <Section title="2. Pessoas que compõem o núcleo familiar">
-                <div className="space-y-2">
-                  {familiares.map((f, idx) => (
-                    <div key={idx} className="grid grid-cols-[2fr_1fr_1.4fr_auto_1.2fr_auto] items-center gap-2 rounded-lg border border-gray-100 p-2">
-                      <input
-                        type="text"
-                        value={f.nome}
-                        placeholder="Nome"
-                        onChange={(e) => updateFamiliar(idx, { nome: e.target.value })}
-                        className="rounded-lg border border-gray-200 px-2 py-1.5 text-sm text-gray-700 outline-none focus:border-violet-400"
-                      />
-                      <input
-                        type="text"
-                        value={f.data_nascimento}
-                        placeholder="dd/mm/aaaa"
-                        onChange={(e) => updateFamiliar(idx, { data_nascimento: e.target.value })}
-                        className="rounded-lg border border-gray-200 px-2 py-1.5 text-sm text-gray-700 outline-none focus:border-violet-400"
-                      />
-                      <input
-                        type="text"
-                        value={f.vinculo_sociofamiliar}
-                        placeholder="Vínculo sociofamiliar"
-                        onChange={(e) => updateFamiliar(idx, { vinculo_sociofamiliar: e.target.value })}
-                        className="rounded-lg border border-gray-200 px-2 py-1.5 text-sm text-gray-700 outline-none focus:border-violet-400"
-                      />
-                      <label className="flex items-center gap-1 text-[11px] text-gray-500 whitespace-nowrap">
-                        <input
-                          type="checkbox"
-                          checked={f.responsavel_legal}
-                          onChange={(e) => updateFamiliar(idx, { responsavel_legal: e.target.checked })}
-                        />
-                        Resp. Legal
-                      </label>
-                      <input
-                        type="text"
-                        inputMode="numeric"
-                        value={f.cpf}
-                        placeholder="CPF"
-                        maxLength={11}
-                        onChange={(e) => updateFamiliar(idx, { cpf: e.target.value.replace(/\D/g, "").slice(0, 11) })}
-                        className="rounded-lg border border-gray-200 px-2 py-1.5 text-sm text-gray-700 outline-none focus:border-violet-400"
-                      />
-                      <button type="button" onClick={() => removeFamiliar(idx)} className="rounded-lg p-1.5 text-gray-400 hover:bg-gray-100 hover:text-red-600">
-                        <Trash2 className="h-4 w-4" />
-                      </button>
-                    </div>
-                  ))}
-                  <button
-                    type="button"
-                    onClick={addFamiliar}
-                    className="inline-flex items-center gap-2 rounded-lg border border-dashed border-gray-300 px-3 py-2 text-sm font-semibold text-gray-500 hover:border-primary hover:text-primary"
-                  >
-                    <Plus className="h-4 w-4" />
-                    Adicionar familiar
-                  </button>
-                </div>
-              </Section>
-
-              <Section title="3. Diagnóstico sociofamiliar">
+              <Section title="2. Diagnóstico sociofamiliar">
                 <Row2>
                   <Field label="Renda familiar">
                     <TInput value={form.renda_familiar ?? ""} onChange={(v) => setField("renda_familiar", v)} />
