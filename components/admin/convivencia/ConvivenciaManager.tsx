@@ -679,21 +679,21 @@ export function ConvivenciaManager() {
                         value={f.nome}
                         placeholder="Nome"
                         onChange={(e) => updateFamiliar(idx, { nome: e.target.value })}
-                        className="rounded-lg border border-gray-200 px-2 py-1.5 text-sm outline-none focus:border-violet-400"
+                        className="rounded-lg border border-gray-200 px-2 py-1.5 text-sm text-gray-900 outline-none focus:border-violet-400"
                       />
                       <input
                         type="text"
                         value={f.data_nascimento}
                         placeholder="dd/mm/aaaa"
                         onChange={(e) => updateFamiliar(idx, { data_nascimento: e.target.value })}
-                        className="rounded-lg border border-gray-200 px-2 py-1.5 text-sm outline-none focus:border-violet-400"
+                        className="rounded-lg border border-gray-200 px-2 py-1.5 text-sm text-gray-900 outline-none focus:border-violet-400"
                       />
                       <input
                         type="text"
                         value={f.vinculo_sociofamiliar}
                         placeholder="Vínculo sociofamiliar"
                         onChange={(e) => updateFamiliar(idx, { vinculo_sociofamiliar: e.target.value })}
-                        className="rounded-lg border border-gray-200 px-2 py-1.5 text-sm outline-none focus:border-violet-400"
+                        className="rounded-lg border border-gray-200 px-2 py-1.5 text-sm text-gray-900 outline-none focus:border-violet-400"
                       />
                       <label className="flex items-center gap-1 text-[11px] text-gray-500 whitespace-nowrap">
                         <input
@@ -708,7 +708,7 @@ export function ConvivenciaManager() {
                         value={f.cpf}
                         placeholder="CPF"
                         onChange={(e) => updateFamiliar(idx, { cpf: e.target.value })}
-                        className="rounded-lg border border-gray-200 px-2 py-1.5 text-sm outline-none focus:border-violet-400"
+                        className="rounded-lg border border-gray-200 px-2 py-1.5 text-sm text-gray-900 outline-none focus:border-violet-400"
                       />
                       <button type="button" onClick={() => removeFamiliar(idx)} className="rounded-lg p-1.5 text-gray-400 hover:bg-gray-100 hover:text-red-600">
                         <Trash2 className="h-4 w-4" />
@@ -844,7 +844,7 @@ export function ConvivenciaManager() {
 
 // ── Componentes auxiliares do formulário ──────────────────────────────────────
 
-const selectCls = "w-full rounded-lg border border-gray-200 px-3 py-2 text-sm outline-none focus:border-violet-400 focus:ring-1 focus:ring-violet-100 bg-white";
+const selectCls = "w-full rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-900 outline-none focus:border-violet-400 focus:ring-1 focus:ring-violet-100 bg-white";
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
@@ -866,7 +866,7 @@ function Row3({ children }: { children: React.ReactNode }) {
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div className="flex flex-col gap-1">
-      <label className="text-[11px] font-semibold uppercase tracking-wide text-gray-400">{label}</label>
+      <label className="text-[11px] font-semibold uppercase tracking-wide text-gray-600">{label}</label>
       {children}
     </div>
   );
@@ -879,7 +879,7 @@ function TInput({ value, onChange, placeholder }: { value: string; onChange: (v:
       value={value}
       placeholder={placeholder}
       onChange={(e) => onChange(e.target.value)}
-      className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm outline-none focus:border-violet-400 focus:ring-1 focus:ring-violet-100"
+      className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-900 outline-none focus:border-violet-400 focus:ring-1 focus:ring-violet-100"
     />
   );
 }
@@ -890,7 +890,7 @@ function TArea({ value, onChange }: { value: string; onChange: (v: string) => vo
       value={value}
       rows={2}
       onChange={(e) => onChange(e.target.value)}
-      className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm outline-none focus:border-violet-400 focus:ring-1 focus:ring-violet-100"
+      className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-900 outline-none focus:border-violet-400 focus:ring-1 focus:ring-violet-100"
     />
   );
 }
@@ -912,7 +912,7 @@ function DateInput({ value, onChange }: { value: string; onChange: (v: string) =
       placeholder="dd/mm/aaaa"
       maxLength={10}
       onChange={(e) => onChange(applyMask(e.target.value))}
-      className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm outline-none focus:border-violet-400 focus:ring-1 focus:ring-violet-100 placeholder:text-gray-300 tracking-widest"
+      className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-900 outline-none focus:border-violet-400 focus:ring-1 focus:ring-violet-100 placeholder:text-gray-300 tracking-widest"
     />
   );
 }
