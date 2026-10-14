@@ -55,3 +55,15 @@ supabase/.temp/
 
 # misc
 *.pem
+
+# dados pessoais / senhas e scripts locais de migração (não versionar)
+/Senha users.xlsx
+/Alunos/
+/BD bubble/
+/sistema finc/
+/*.csv
+/migrar_alunos.sql
+/migrar_alunos.py
+/inserir_alunos.py
+/retry_insert.py
+/diagnostico.py
