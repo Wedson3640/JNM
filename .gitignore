@@ -67,3 +67,5 @@ supabase/.temp/
 /inserir_alunos.py
 /retry_insert.py
 /diagnostico.py
+/restaurar_backup.py
+/restauracao_alunos_log.csv
