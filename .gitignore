@@ -69,3 +69,5 @@ supabase/.temp/
 /diagnostico.py
 /restaurar_backup.py
 /restauracao_alunos_log.csv
+/cadastrar_alunos_2026.py
+__pycache__/

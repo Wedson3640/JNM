@@ -65,6 +65,9 @@ const STATUS_ATIVO = "Matriculado";
 // Status de histórico (saída)
 const STATUS_HISTORICO = ["Transferido", "Desistente", "Concluído", "Cancelado"];
 
+// A tela abre no ano letivo corrente; anos anteriores ficam no filtro da coluna
+const ANO_ATUAL = String(new Date().getFullYear());
+
 function val(v: string | null | undefined) {
   return v && v.trim() ? v : "—";
 }
@@ -314,7 +317,8 @@ export function CrecheManager() {
   const [series, setSeries]                 = useState<string[]>([]);
   const [activeSerie, setActiveSerie]       = useState<string>("");
   const [search, setSearch]                 = useState("");
-  const [anoLetivo, setAnoLetivo]           = useState("");
+  const [anoLetivo, setAnoLetivo]           = useState(ANO_ATUAL);
+  const [anos, setAnos]                     = useState<string[]>([ANO_ATUAL]);
   const [statusFiltro, setStatusFiltro]     = useState("");
   const [mostrarHistorico, setMostrarHistorico] = useState(false);
   const [alunos, setAlunos]                 = useState<Aluno[]>([]);
@@ -322,25 +326,44 @@ export function CrecheManager() {
   const [loadingSeries, setLoadingSeries]   = useState(true);
   const [error, setError]                   = useState<string | null>(null);
 
-  // ── Carrega as séries disponíveis no banco (alunos Matriculados) ──────────
+  // ── Carrega os anos letivos existentes (opções do filtro) ────────────────
   useEffect(() => {
     if (!process.env.NEXT_PUBLIC_SUPABASE_URL) return;
 
     const supabase = createSupabaseBrowserClient();
     supabase
       .from("alunos")
-      .select("serie")
-      .eq("status", STATUS_ATIVO)
-      .order("serie", { ascending: true })
+      .select("ano_letivo")
       .then(({ data }) => {
-        const distintas = Array.from(
-          new Set((data ?? []).map((r: { serie: string }) => r.serie).filter(Boolean))
-        ).sort() as string[];
-        setSeries(distintas);
-        if (distintas.length > 0) setActiveSerie(distintas[0]);
-        setLoadingSeries(false);
+        const distintos = new Set((data ?? []).map((r: { ano_letivo: string }) => r.ano_letivo).filter(Boolean));
+        distintos.add(ANO_ATUAL);
+        setAnos(Array.from(distintos).sort().reverse() as string[]);
       });
   }, []);
+
+  // ── Carrega as séries do ano letivo selecionado (alunos Matriculados) ────
+  useEffect(() => {
+    if (!process.env.NEXT_PUBLIC_SUPABASE_URL) return;
+
+    setLoadingSeries(true);
+    const supabase = createSupabaseBrowserClient();
+    let query = supabase
+      .from("alunos")
+      .select("serie")
+      .eq("status", STATUS_ATIVO)
+      .order("serie", { ascending: true });
+    if (anoLetivo) query = query.eq("ano_letivo", anoLetivo);
+
+    query.then(({ data }) => {
+      const distintas = Array.from(
+        new Set((data ?? []).map((r: { serie: string }) => r.serie).filter(Boolean))
+      ).sort() as string[];
+      setSeries(distintas);
+      setActiveSerie((atual) => (distintas.includes(atual) ? atual : distintas[0] ?? ""));
+      if (distintas.length === 0) setAlunos([]);
+      setLoadingSeries(false);
+    });
+  }, [anoLetivo]);
 
   // ── Fetch alunos quando série ativa ou modo histórico muda ───────────────
   useEffect(() => {
@@ -355,6 +378,7 @@ export function CrecheManager() {
       .select("*")
       .eq("serie", activeSerie)
       .order("nome_aluno", { ascending: true });
+    if (anoLetivo) query = query.eq("ano_letivo", anoLetivo);
 
     // Modo padrão: apenas matriculados | Modo histórico: apenas saídas
     if (!mostrarHistorico) {
@@ -372,7 +396,7 @@ export function CrecheManager() {
       }
       setAlunos((data ?? []) as Aluno[]);
     });
-  }, [activeSerie, mostrarHistorico]);
+  }, [activeSerie, mostrarHistorico, anoLetivo]);
 
   // ── Estado do modal de edição ────────────────────────────────────────────
   const [editingAluno, setEditingAluno] = useState<Aluno | null>(null);
@@ -558,6 +582,7 @@ export function CrecheManager() {
       const novoAluno = inserted as Aluno;
       const visivel =
         novoAluno.serie === activeSerie &&
+        (!anoLetivo || novoAluno.ano_letivo === anoLetivo) &&
         (!mostrarHistorico
           ? novoAluno.status === STATUS_ATIVO
           : STATUS_HISTORICO.includes(novoAluno.status));
@@ -631,14 +656,28 @@ export function CrecheManager() {
     return matchSearch && matchAno && matchStatus;
   });
 
-  // Collect distinct anos for filter dropdown
-  const anos = Array.from(new Set(alunos.map((a) => a.ano_letivo))).sort().reverse();
-
+  // O ano letivo não é resetado: ele define as turmas exibidas
   function resetFiltros() {
     setSearch("");
-    setAnoLetivo("");
     setStatusFiltro("");
   }
+
+  // Filtro de ano letivo (cabeçalho da coluna; repetido na lista vazia para poder trocar de ano)
+  const filtroAno = (
+    <select
+      value={anoLetivo}
+      onChange={(e) => setAnoLetivo(e.target.value)}
+      aria-label="Filtrar por ano letivo"
+      className={`rounded-md border px-2 py-1 text-xs font-bold uppercase tracking-wide outline-none focus:border-primary ${
+        anoLetivo === ANO_ATUAL ? "border-gray-200 bg-white text-gray-500" : "border-primary bg-orange-50 text-primary"
+      }`}
+    >
+      <option value="">Ano Letivo: todos</option>
+      {anos.map((ano) => (
+        <option key={ano} value={ano}>Ano Letivo: {ano}</option>
+      ))}
+    </select>
+  );
 
   return (
     <div className="space-y-4">
@@ -703,18 +742,6 @@ export function CrecheManager() {
 
         {/* Cabeçalho com filtros */}
         <div className="flex flex-wrap items-center gap-3 border-b border-gray-100 p-4">
-
-          {/* Ano letivo */}
-          <select
-            value={anoLetivo}
-            onChange={(e) => setAnoLetivo(e.target.value)}
-            className="rounded-lg border border-gray-200 px-3 py-2 text-sm outline-none focus:border-primary"
-          >
-            <option value="">Todos os anos</option>
-            {anos.map((ano) => (
-              <option key={ano} value={ano}>{ano}</option>
-            ))}
-          </select>
 
           {/* Filtro de status — só aparece no modo histórico */}
           {mostrarHistorico && (
@@ -788,6 +815,16 @@ export function CrecheManager() {
             <div className="flex flex-col items-center gap-3 p-10 text-center">
               <UserRound className="h-10 w-10 text-gray-200" />
               <p className="text-sm text-gray-400">Nenhum aluno encontrado nesta turma.</p>
+              {filtroAno}
+              {(search || statusFiltro) && (
+                <button
+                  type="button"
+                  onClick={resetFiltros}
+                  className="rounded-lg border border-gray-200 px-3 py-1.5 text-sm font-semibold text-gray-600 hover:border-primary hover:text-primary"
+                >
+                  Limpar filtros
+                </button>
+              )}
             </div>
           ) : (
             <table className="w-full text-sm">
@@ -799,7 +836,7 @@ export function CrecheManager() {
                   <th className="px-4 py-3">Contato</th>
                   <th className="px-4 py-3">Série</th>
                   <th className="px-4 py-3">Status</th>
-                  <th className="px-4 py-3">Ano Letivo</th>
+                  <th className="px-4 py-2">{filtroAno}</th>
                   <th className="px-4 py-3 text-center">Ações</th>
                 </tr>
               </thead>
